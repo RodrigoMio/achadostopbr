@@ -115,6 +115,21 @@ cp .env.example .env
 
 Mantenha `auth_info` no disco local do servidor.
 
+## Publicar no GitHub
+
+O repositório local já está inicializado na branch `main`. Após criar o repo vazio no GitHub (sem README, se for o primeiro push):
+
+```powershell
+git remote add origin https://github.com/SEU_USUARIO/SEU_REPO.git
+git push -u origin main
+```
+
+Ou use o script (substitua a URL):
+
+```powershell
+.\scripts\github-push.ps1 -RemoteUrl "https://github.com/SEU_USUARIO/SEU_REPO.git"
+```
+
 ## Scripts
 
 | Comando      | Descrição              |
