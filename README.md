@@ -1,6 +1,6 @@
 # afiliados_whatsapp
 
-Servidor Node.js (Express + Baileys) para enviar mensagens de texto a grupos do WhatsApp via HTTP.
+Servidor Node.js (Express + Baileys) para enviar mensagens a grupos do WhatsApp via HTTP — ideal para automações no **Make** (texto ou post de afiliado com imagem + link).
 
 ## Requisitos
 
@@ -32,9 +32,17 @@ Verifica se o HTTP está no ar.
 
 ### `POST /send-message`
 
-Envia texto para um grupo.
+Envia mensagem para um grupo. Dois modos:
 
-**Body (JSON):**
+`groupId` pode ser o JID completo (`...@g.us`) ou só o ID numérico.
+
+**Respostas:**
+
+- `200` — mensagem enviada (`mode`: `text` ou `affiliate`)
+- `400` — body inválido
+- `503` — WhatsApp ainda não conectado
+
+#### Modo 1 — só texto
 
 ```json
 {
@@ -43,21 +51,62 @@ Envia texto para um grupo.
 }
 ```
 
-`groupId` pode ser o JID completo (`...@g.us`) ou só o ID numérico.
+#### Modo 2 — afiliado (imagem + texto + link)
 
-**Respostas:**
+Uma mensagem no WhatsApp: **imagem** com **legenda** (`texto` + link clicável).
 
-- `200` — mensagem enviada
-- `400` — body inválido
-- `503` — WhatsApp ainda não conectado
+```json
+{
+  "groupId": "120363123456789012@g.us",
+  "message": "Oferta imperdível!",
+  "link": "https://exemplo.com/produto?tag=afiliado",
+  "imageUrl": "https://exemplo.com/imagem-produto.jpg"
+}
+```
 
-Exemplo:
+Regras:
+
+- `groupId` e `message` são sempre obrigatórios.
+- Se enviar `link` ou `imageUrl`, **os dois** são obrigatórios (URLs `http`/`https`).
+- `imageUrl` deve ser uma URL pública acessível pelo servidor (Baileys baixa a imagem).
+
+Exemplos:
 
 ```bash
+# Texto
 curl -X POST http://localhost:3000/send-message \
   -H "Content-Type: application/json" \
   -d "{\"groupId\":\"120363123456789012@g.us\",\"message\":\"Teste\"}"
+
+# Afiliado
+curl -X POST http://localhost:3000/send-message \
+  -H "Content-Type: application/json" \
+  -d "{\"groupId\":\"120363123456789012@g.us\",\"message\":\"Confira!\",\"link\":\"https://exemplo.com/p\",\"imageUrl\":\"https://exemplo.com/img.jpg\"}"
 ```
+
+### Integração com Make
+
+1. Publique a API em um host com URL pública (Railway, Render, etc.) — `localhost` não funciona no Make sem túnel.
+2. No cenário, adicione **HTTP → Make a request**.
+3. Configure:
+   - **URL:** `https://<seu-dominio>/send-message`
+   - **Method:** `POST`
+   - **Headers:** `Content-Type: application/json`
+   - **Body type:** JSON (raw), por exemplo:
+
+```json
+{
+  "groupId": "{{id_do_grupo}}",
+  "message": "{{texto_promocional}}",
+  "link": "{{link_afiliado}}",
+  "imageUrl": "{{url_imagem_produto}}"
+}
+```
+
+4. Mapeie os campos a partir dos módulos anteriores (planilha, e-commerce, RSS, etc.).
+5. **Erros:** `503` = WhatsApp desconectado (use retry no Make); `400` = revise o JSON.
+
+Use o **Modo 2** para posts com imagem, texto e link de afiliado.
 
 ## Segurança
 

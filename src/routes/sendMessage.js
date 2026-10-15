@@ -4,23 +4,16 @@ import {
   isWhatsAppReady,
   normalizeGroupJid,
 } from '../whatsapp/client.js';
+import { validateSendPayload } from '../utils/validateSendPayload.js';
 
 const router = Router();
 
 router.post('/send-message', async (req, res, next) => {
   try {
-    const { groupId, message } = req.body ?? {};
+    const validated = validateSendPayload(req.body);
 
-    if (!groupId || typeof groupId !== 'string') {
-      return res.status(400).json({
-        error: 'Campo "groupId" é obrigatório e deve ser uma string.',
-      });
-    }
-
-    if (!message || typeof message !== 'string') {
-      return res.status(400).json({
-        error: 'Campo "message" é obrigatório e deve ser uma string.',
-      });
+    if (!validated.ok) {
+      return res.status(400).json({ error: validated.error });
     }
 
     if (!isWhatsAppReady()) {
@@ -30,12 +23,22 @@ router.post('/send-message', async (req, res, next) => {
       });
     }
 
-    const jid = normalizeGroupJid(groupId);
+    const jid = normalizeGroupJid(validated.groupId);
     const sock = getWhatsAppSocket();
-    const result = await sock.sendMessage(jid, { text: message });
+
+    let result;
+    if (validated.mode === 'affiliate') {
+      result = await sock.sendMessage(jid, {
+        image: { url: validated.imageUrl },
+        caption: validated.caption,
+      });
+    } else {
+      result = await sock.sendMessage(jid, { text: validated.message });
+    }
 
     return res.status(200).json({
       success: true,
+      mode: validated.mode,
       groupId: jid,
       messageId: result?.key?.id ?? null,
     });
