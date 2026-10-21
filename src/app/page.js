@@ -13,13 +13,15 @@ function CatalogSoon() {
 }
 
 export default async function HomePage() {
+  let profile = null;
   try {
-    const profile = await getDefaultCatalogProfile();
-    if (profile?.slug) {
-      redirect(`/${profile.slug}`);
-    }
+    profile = await getDefaultCatalogProfile();
   } catch (err) {
     console.error('[default catalog]', err);
+  }
+
+  if (profile?.slug) {
+    redirect(`/${profile.slug}`);
   }
 
   return <CatalogSoon />;
