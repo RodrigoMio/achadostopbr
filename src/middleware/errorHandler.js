@@ -1,9 +1,9 @@
-import { Boom } from '@hapi/boom';
+import { isBoom } from '@hapi/boom';
 
 export function errorHandler(err, _req, res, _next) {
   console.error('[Erro]', err);
 
-  if (Boom.isBoom(err)) {
+  if (isBoom(err)) {
     return res.status(err.output.statusCode).json({
       error: err.message,
     });

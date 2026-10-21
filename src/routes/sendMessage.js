@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   getWhatsAppSocket,
+  getWhatsAppStatus,
   isWhatsAppReady,
   normalizeGroupJid,
 } from '../whatsapp/client.js';
@@ -17,10 +18,16 @@ router.post('/send-message', async (req, res, next) => {
     }
 
     if (!isWhatsAppReady()) {
-      return res.status(503).json({
-        error:
-          'WhatsApp não está conectado. Aguarde a autenticação ou verifique o QR Code no terminal.',
-      });
+      const wa = getWhatsAppStatus();
+      console.warn(
+        `[503] WhatsApp não pronto — connected=${wa.connected} hasSocket=${wa.hasSocket} connecting=${wa.connecting}`,
+      );
+
+      const error = wa.connecting
+        ? 'WhatsApp reconectando. Tente novamente em alguns segundos.'
+        : 'WhatsApp não está conectado. Aguarde a autenticação ou verifique o QR Code no terminal.';
+
+      return res.status(503).json({ error, whatsapp: wa });
     }
 
     const jid = normalizeGroupJid(validated.groupId);

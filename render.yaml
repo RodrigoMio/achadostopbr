@@ -1,0 +1,29 @@
+# Blueprint: vitrine pública (PUBLIC_ONLY). Admin/WhatsApp no localhost.
+# New → Blueprint no Render ou Web Service manual com o mesmo Dockerfile.
+
+services:
+  - type: web
+    name: afiliados-whatsapp
+    runtime: docker
+    plan: starter
+    numInstances: 1
+    healthCheckPath: /api/health
+    dockerContext: .
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: PUBLIC_ONLY
+        value: "true"
+      - key: NODE_ENV
+        value: production
+      - key: HOSTNAME
+        value: 0.0.0.0
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.6-flash

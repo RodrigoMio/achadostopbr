@@ -1,0 +1,17 @@
+services:
+  app:
+    build: .
+    ports:
+      - "${PORT:-3000}:3000"
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+      AUTH_PATH: auth_info
+    volumes:
+      - auth_info:/app/auth_info
+    restart: unless-stopped
+
+volumes:
+  auth_info:

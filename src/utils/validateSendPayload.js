@@ -10,6 +10,36 @@ export function isHttpUrl(value) {
   }
 }
 
+/** Monta legenda: texto + link uma vez (evita duplicar se a IA já incluiu o link). */
+export function buildAffiliateCaption(message, link) {
+  const normalizedLink = link.trim();
+  let text = message.trim();
+
+  if (!text) {
+    return normalizedLink;
+  }
+
+  const lines = text.split('\n');
+  while (lines.length > 0 && lines[lines.length - 1].trim() === normalizedLink) {
+    lines.pop();
+  }
+  text = lines.join('\n').trim();
+
+  while (text.endsWith(normalizedLink)) {
+    text = text.slice(0, -normalizedLink.length).trimEnd();
+  }
+
+  if (!text) {
+    return normalizedLink;
+  }
+
+  if (text.includes(normalizedLink)) {
+    return text;
+  }
+
+  return `${text}\n\n${normalizedLink}`;
+}
+
 function nonEmptyString(value, fieldName) {
   if (typeof value !== 'string' || !value.trim()) {
     return {
@@ -76,7 +106,7 @@ export function validateSendPayload(body) {
     };
   }
 
-  const caption = `${messageResult.value}\n\n${link}`;
+  const caption = buildAffiliateCaption(messageResult.value, link);
 
   return {
     ok: true,

@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+.cursor
+.env
+.env.*
+!.env.example
+auth_info
+*.log
+README.md

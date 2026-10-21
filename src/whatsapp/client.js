@@ -15,6 +15,7 @@ let connectionReady = false;
 /** @type {Promise<void> | null} */
 let connectionPromise = null;
 let isReplacingSocket = false;
+let isConnecting = false;
 let backoffStep = 0;
 let lastAuthClearAt = 0;
 
@@ -64,6 +65,14 @@ async function waitBackoffAndReconnect() {
 
 export function isWhatsAppReady() {
   return connectionReady && sock !== null;
+}
+
+export function getWhatsAppStatus() {
+  return {
+    connected: isWhatsAppReady(),
+    hasSocket: sock !== null,
+    connecting: isConnecting && !connectionReady,
+  };
 }
 
 export function getWhatsAppSocket() {
@@ -122,12 +131,14 @@ async function handleDisconnect(statusCode, errorMessage) {
   connectionPromise = null;
 
   if (statusCode === DisconnectReason.loggedOut) {
+    isConnecting = false;
     await clearAuthState();
     console.log('Sessão encerrada no WhatsApp. Reinicie o servidor e escaneie um novo QR Code.');
     return;
   }
 
   if (statusCode === DisconnectReason.connectionReplaced) {
+    isConnecting = false;
     console.log(
       'Outra sessão WhatsApp Web está ativa nesta conta. Reconexão automática desativada.',
     );
@@ -199,6 +210,7 @@ async function startSocket() {
 
     if (connection === 'open') {
       resetBackoff();
+      isConnecting = false;
       setReady(true);
       console.log('WhatsApp conectado com sucesso.');
       return;
@@ -208,6 +220,7 @@ async function startSocket() {
       if (isReplacingSocket) return;
 
       setReady(false);
+      isConnecting = true;
       const statusCode = new Boom(lastDisconnect?.error)?.output?.statusCode;
       const errorMessage = lastDisconnect?.error?.message;
 
@@ -223,8 +236,10 @@ async function startSocket() {
 
 export function connectWhatsApp() {
   if (!connectionPromise) {
+    isConnecting = true;
     connectionPromise = startSocket().catch((err) => {
       connectionPromise = null;
+      isConnecting = false;
       throw err;
     });
   }

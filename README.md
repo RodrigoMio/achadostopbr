@@ -1,187 +1,196 @@
-# afiliados_whatsapp
+# Afiliados WhatsApp
 
-Servidor Node.js (Express + Baileys) para enviar mensagens a grupos do WhatsApp via HTTP — ideal para automações no **Make** (texto ou post de afiliado com imagem + link).
+Painel Next.js para gestão de produtos de afiliados, autenticação por QR Code (Baileys) e vitrine pública por `slug`.
+
+A publicação automática em grupos do WhatsApp fica para uma fase seguinte. Nesta versão o Gemini gera título, descrição e preço; o afiliado decide o que aparece na vitrine.
 
 ## Requisitos
 
 - Node.js 20+
 - Conta WhatsApp para pareamento (QR Code)
+- Projeto Supabase com as tabelas `status`, `users`, `platform`, `category` e `product`
+- Chave de API do Google Gemini
 
-## Configuração local
+## 1. Ajustar o banco (obrigatório)
+
+No SQL Editor do Supabase, execute:
+
+`supabase/migrations/001_adjust_schema.sql`  
+`supabase/migrations/002_users_prompt_ia.sql`  
+`supabase/migrations/003_product_title_nullable.sql`  
+`supabase/migrations/004_product_whatsapp_group_name.sql`  
+`supabase/migrations/005_user_group_and_product_sent.sql`  
+`supabase/migrations/006_whatsapp_groups.sql`  
+`supabase/migrations/007_users_catalog_default.sql`
+
+O script `001`:
+
+- Corrige tipos de URL (`TEXT`) e o nome `updates_at` → `updated_at`
+- Adiciona `whatsapp_group_invite_url` e `whatsapp_group_jid` em `users`
+- Cria índices e RLS
+- Garante `whatsapp_jid` único
+
+Cadastre o afiliado **antes** do primeiro login. O JID deve ficar no formato:
+
+`5511999999999@s.whatsapp.net`
+
+Com `id_status = 1` (Ativo) e um `slug` único (ex.: `rodrigo`). A vitrine fica em `/rodrigo`. Marque **um** afiliado com `default_catalog = true` para a home `/` redirecionar para essa vitrine.
+
+Os CTAs de grupos na vitrine levam a `/{slug}/groups`. A coluna `whatsapp_group_invite_url` não é utilizada pelo app.
+
+Não use slugs reservados: `admin`, `products`, `api`.
+
+## 2. Configuração local
 
 ```bash
 npm ci
-cp .env.example .env   # Windows: copy .env.example .env
-npm start
+copy .env.example .env
 ```
 
-Variáveis (`.env`):
+Variáveis:
 
-| Variável    | Descrição                          | Padrão     |
-|-------------|------------------------------------|------------|
-| `PORT`      | Porta do servidor HTTP             | `3000`     |
-| `AUTH_PATH` | Pasta da sessão Baileys            | `auth_info`|
-
-Na primeira execução, escaneie o **QR Code** exibido no terminal. A sessão fica em `auth_info/` (não commite essa pasta).
-
-## API
-
-### `GET /health`
-
-Verifica se o HTTP está no ar.
-
-### `POST /send-message`
-
-Envia mensagem para um grupo. Dois modos:
-
-`groupId` pode ser o JID completo (`...@g.us`) ou só o ID numérico.
-
-**Respostas:**
-
-- `200` — mensagem enviada (`mode`: `text` ou `affiliate`)
-- `400` — body inválido
-- `503` — WhatsApp ainda não conectado
-
-#### Modo 1 — só texto
-
-```json
-{
-  "groupId": "120363123456789012@g.us",
-  "message": "Olá, grupo!"
-}
-```
-
-#### Modo 2 — afiliado (imagem + texto + link)
-
-Uma mensagem no WhatsApp: **imagem** com **legenda** (`texto` + link clicável).
-
-```json
-{
-  "groupId": "120363123456789012@g.us",
-  "message": "Oferta imperdível!",
-  "link": "https://exemplo.com/produto?tag=afiliado",
-  "imageUrl": "https://exemplo.com/imagem-produto.jpg"
-}
-```
-
-Regras:
-
-- `groupId` e `message` são sempre obrigatórios.
-- Se enviar `link` ou `imageUrl`, **os dois** são obrigatórios (URLs `http`/`https`).
-- `imageUrl` deve ser uma URL pública acessível pelo servidor (Baileys baixa a imagem).
-
-Exemplos:
+| Variável | Descrição |
+|----------|-----------|
+| `PORT` | Porta HTTP (padrão `3000`) |
+| `AUTH_PATH` | Pasta da sessão Baileys (`auth_info`) |
+| `SESSION_SECRET` | Segredo do cookie do painel (string longa) |
+| `SUPABASE_URL` | URL do projeto Supabase |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role (somente servidor) |
+| `GEMINI_API_KEY` | Chave do Gemini |
+| `GEMINI_MODEL` | ID do modelo (padrão `gemini-3.6-flash`). `auto` → alias `gemini-flash-latest` |
+| `GEMINI_MODEL_FALLBACKS` | Opcional: modelos alternados se o principal falhar (503/404) |
 
 ```bash
-# Texto
-curl -X POST http://localhost:3000/send-message \
-  -H "Content-Type: application/json" \
-  -d "{\"groupId\":\"120363123456789012@g.us\",\"message\":\"Teste\"}"
-
-# Afiliado
-curl -X POST http://localhost:3000/send-message \
-  -H "Content-Type: application/json" \
-  -d "{\"groupId\":\"120363123456789012@g.us\",\"message\":\"Confira!\",\"link\":\"https://exemplo.com/p\",\"imageUrl\":\"https://exemplo.com/img.jpg\"}"
+npm run dev
 ```
 
-### Integração com Make
+Abra `http://localhost:3000/admin`, escaneie o QR Code com o WhatsApp do número cadastrado e o painel abre.
 
-1. Publique a API em um host com URL pública (Railway, Render, etc.) — `localhost` não funciona no Make sem túnel.
-2. No cenário, adicione **HTTP → Make a request**.
-3. Configure:
-   - **URL:** `https://<seu-dominio>/send-message`
-   - **Method:** `POST`
-   - **Headers:** `Content-Type: application/json`
-   - **Body type:** JSON (raw), por exemplo:
+## Rotas
 
-```json
-{
-  "groupId": "{{id_do_grupo}}",
-  "message": "{{texto_promocional}}",
-  "link": "{{link_afiliado}}",
-  "imageUrl": "{{url_imagem_produto}}"
-}
+| Rota | Função |
+|------|--------|
+| `/` | Redirect para a vitrine com `default_catalog` |
+| `/admin` | QR (sem sessão) e painel (com sessão) |
+| `/products` | Gestão de produtos |
+| `/[slug]` | Vitrine pública |
+| `/[slug]/groups` | Landing de grupos WhatsApp |
+| `GET /api/health` | Saúde do processo e estado do WhatsApp |
+
+## Fluxo de produtos
+
+1. Em **Produtos**, configure **Prompt para IA** (gravado em `users.prompt_ia`).
+2. **Novo produto** grava com status `4` (Gerar IA), **sem** chamar o Gemini.
+3. **Gerar IA** (só com status 4) envia o **prompt do utilizador** (`users.prompt_ia`) ao Gemini (modo JSON), anexa automaticamente o **`product_link`** do produto, e espera JSON com `Titulo` e `Descricao`. `Titulo` grava em `product.title` (se ainda for `NULL`/vazio; caso contrário mantém o título já definido). `Descricao` grava em `product.ia_description`; status passa para `5` (A Divulgar). Resposta inválida → erro 500.
+4. **Mostrar na vitrine** → status `6` (Divulgado). Só estes aparecem em `/[slug]`.
+5. A vitrine filtra pela janela `users.days_limit_show_product` usando `product.updated_at`.
+
+Sem prompt salvo, **Gerar IA** é bloqueado. Preço `R$ 0,00` não é exibido na vitrine.
+
+### Exemplo de prompt (JSON)
+
+Configure em **Prompt para IA**. Não é necessário colar o URL do produto no prompt — o sistema injeta `product_link` ao gerar.
+
+```
+Sua tarefa é gerar um json com textos para envio no grupo do WhatsApp contendo 2 chaves:
+Chave "Titulo": Nome do produto extraído do link do produto
+Chave "Descricao": Uma frase curta, criativa e bem-humorada sobre o produto, criando um desejo de compra
+Regras estritas:
+- Retorne EXCLUSIVAMENTE um objeto JSON com as chaves Titulo e Descricao, sem blocos de código.
 ```
 
-4. Mapeie os campos a partir dos módulos anteriores (planilha, e-commerce, RSS, etc.).
-5. **Erros:** `503` = WhatsApp desconectado (use retry no Make); `400` = revise o JSON.
+## Gemini: modelo e “versão da API”
 
-Use o **Modo 2** para posts com imagem, texto e link de afiliado.
+A chave (`GEMINI_API_KEY`) **não** traz número de versão. O SDK chama sempre o endpoint **`v1beta`**; o que você escolhe é o **ID do modelo** na URL `.../v1beta/models/{model}:generateContent`. Isso é obrigatório — não existe geração sem `model`.
+
+Documentação: [Models API (list)](https://ai.google.dev/api/models), [modelos Gemini](https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash).
+
+Para ver quais modelos **a sua chave** aceita para `generateContent`:
+
+```bash
+curl "https://generativelanguage.googleapis.com/v1beta/models?key=SUA_GEMINI_API_KEY"
+```
+
+Alguns IDs aparecem na lista mas **não geram mais** (ex.: `gemini-2.5-flash` → 404 “no longer”). Prefira modelos atuais como `gemini-3.6-flash` ou `gemini-3.5-flash-lite`. O app tenta `GEMINI_MODEL` e depois `GEMINI_MODEL_FALLBACKS` se houver 503/404.
+
+## Troubleshooting (SSL no Windows)
+
+Se `/products` ou o Supabase falharem com `unable to verify the first certificate` ou `UNABLE_TO_VERIFY_LEAF_SIGNATURE`, o antivírus ou proxy local pode estar interceptando HTTPS. Em **desenvolvimento**, adicione ao `.env`:
+
+```
+TLS_INSECURE_DEV=true
+```
+
+Reinicie `npm run dev`. **Não use em produção** — no VPS o certificado costuma funcionar normalmente.
 
 ## Segurança
 
-- **Nunca** commite `.env` ou `auth_info/` (contêm credenciais).
-- Em produção, proteja `/send-message` (API key, firewall, VPN, etc.).
+- Nunca commite `.env` ou `auth_info/`.
+- A `SUPABASE_SERVICE_ROLE_KEY` não vai para o browser. Todas as queries passam pelo servidor.
+- RLS impede escrita anônima e esconde `users.whatsapp_jid` do papel `anon`.
 
-## Deploy (Baileys)
+## Deploy
 
-Este projeto **não** roda bem em Vercel/serverless: é preciso um **processo contínuo** e **disco persistente** para `auth_info`.
+**Não publique na Vercel** (nem Netlify, Cloudflare Workers ou outro serverless).
 
-Plataformas compatíveis: **Railway**, **Render**, **Fly.io** ou **VPS**.
+### Etapa atual: só a vitrine no Render
 
-### Passos gerais
+O admin e o WhatsApp ficam no **localhost** (`npm run dev`). O Render serve `/`, `/{slug}` e `/{slug}/groups` lendo o Supabase.
 
-1. Conecte o repositório GitHub ao provedor.
-2. **Build:** `npm ci`
-3. **Start:** `npm start`
-4. **Variáveis de ambiente:** `AUTH_PATH=auth_info` (e `PORT` se o host não definir automaticamente).
-5. **Volume persistente:** monte um disco no caminho `auth_info` (ou no valor de `AUTH_PATH`).
-6. Abra os **logs** do serviço e escaneie o **QR Code** na primeira subida (sessão nova no servidor; não envie `auth_info` do seu PC para o Git).
-7. Teste: `POST https://<seu-dominio>/send-message`.
+1. `PUBLIC_ONLY=true` no Render. **Não** defina isso no `.env` local.
+2. Variáveis: `HOSTNAME=0.0.0.0`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SESSION_SECRET` (string longa). Sem disco, sem `AUTH_PATH`, sem `TLS_INSECURE_DEV`. Gemini opcional na vitrine.
+3. **Nunca** escaneie QR no domínio público (admin/QR só em `http://localhost:3000/admin`).
+4. No Supabase: `default_catalog = true` em um afiliado ativo para `/` redirecionar.
+5. PC ligado só para gerar IA, publicar produto ou enviar nos grupos.
 
-### Railway
+O `server.js` não inicia o Baileys quando `PUBLIC_ONLY=true`.
 
-1. New Project → Deploy from GitHub.
-2. Settings → Variables: `AUTH_PATH=auth_info`.
-3. Settings → Volumes: monte em `/app/auth_info` (ou raiz do projeto + `auth_info`).
-4. Deploy e pareie pelo QR nos logs.
+### Render (vitrine — passo a passo)
 
-### Render
+1. Conta em [render.com](https://render.com) (login com GitHub).
+2. **New → Blueprint** e aponte para este repo (`render.yaml`) **ou** **New → Web Service** → repo → **Docker**.
+3. Plano **Starter** (evite free que hiberna após inatividade).
+4. Health check: `/api/health`.
+5. Environment (se não usar Blueprint): `PUBLIC_ONLY=true`, `NODE_ENV=production`, `HOSTNAME=0.0.0.0`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SESSION_SECRET`.
+6. Deploy. Teste `/`, `/{slug}` e `/{slug}/groups`. Health: `"publicOnly": true`.
 
-1. New → Web Service → conecte o repo.
-2. Build Command: `npm ci`
-3. Start Command: `npm start`
-4. Environment: `AUTH_PATH=auth_info`
-5. Disk (plano com persistent disk): mount path `auth_info`.
-6. Logs → QR Code na primeira execução.
+### WhatsApp 24h no host (fase seguinte)
+
+Processo Node 20 contínuo, **uma instância**, volume em `AUTH_PATH`, **sem** `PUBLIC_ONLY`. Health check: `GET /api/health`. Ver `docker-compose.yml`, `fly.toml` ou Railway com volume.
+
+### Railway (alternativa)
+
+Mesmas variáveis da vitrine, `Dockerfile`, 1 réplica, **sem volume**. Serverless off.
 
 ### Fly.io
 
-1. `fly launch` (ou dashboard + Dockerfile se preferir).
-2. Crie volume: `fly volumes create auth_data --size 1`
-3. Monte em `auth_info` no `fly.toml` e defina `AUTH_PATH=auth_info`.
-4. `fly logs` para o QR.
+```bash
+fly launch --no-deploy
+fly volumes create auth_info --size 1 --region gru
+fly secrets set SESSION_SECRET=... SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... GEMINI_API_KEY=...
+fly deploy
+```
 
-### VPS (Ubuntu)
+O `fly.toml` deixa a máquina sempre ligada (`auto_stop_machines = "off"`) e monta o volume em `/data` (`AUTH_PATH=/data/auth_info`). Troque `app` e `primary_region` se precisar.
+
+### VPS (Hetzner, DigitalOcean, Contabo)
+
+Com Docker no servidor:
 
 ```bash
-git clone <seu-repo>
-cd afiliados_whatsapp
-npm ci
 cp .env.example .env
-# systemd ou pm2: npm start, reinício automático
+# edite .env
+docker compose up -d --build
 ```
 
-Mantenha `auth_info` no disco local do servidor.
+O `docker-compose.yml` sobe **uma** réplica, escuta em `0.0.0.0` e persiste `auth_info` num volume nomeado.
 
-## Publicar no GitHub
-
-O repositório local já está inicializado na branch `main`. Após criar o repo vazio no GitHub (sem README, se for o primeiro push):
-
-```powershell
-git remote add origin https://github.com/SEU_USUARIO/SEU_REPO.git
-git push -u origin main
-```
-
-Ou use o script (substitua a URL):
-
-```powershell
-.\scripts\github-push.ps1 -RemoteUrl "https://github.com/SEU_USUARIO/SEU_REPO.git"
-```
+Sem Docker: Node 20, `npm ci && npm run build && npm start`, pasta persistente em `AUTH_PATH`, e `systemd` (ou equivalente) para o processo não morrer no logout.
 
 ## Scripts
 
-| Comando      | Descrição              |
-|--------------|------------------------|
-| `npm start`  | Produção               |
-| `npm run dev`| Desenvolvimento (watch)|
+| Comando | Descrição |
+|---------|-----------|
+| `npm run dev` | Desenvolvimento (watch + Baileys) |
+| `npm run build` | Build de produção do Next.js |
+| `npm start` | Produção (`node server.js`, exige build) |
