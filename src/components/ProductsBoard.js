@@ -84,6 +84,7 @@ export function ProductsBoard({
   platforms,
   initialPrompt = '',
   initialWhatsappGroupName = '',
+  initialStoreUrl = '',
 }) {
   const [products, setProducts] = useState(initialProducts);
   const [open, setOpen] = useState(false);
@@ -424,6 +425,7 @@ export function ProductsBoard({
         open={Boolean(waProduct)}
         product={waProduct}
         initialGroupName={whatsappGroupName}
+        storeUrl={initialStoreUrl}
         onClose={() => setWaProduct(null)}
         onProductUpdated={replaceProduct}
         onGroupNameSaved={setWhatsappGroupName}

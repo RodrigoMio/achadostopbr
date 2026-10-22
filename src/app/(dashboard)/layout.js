@@ -1,13 +1,34 @@
+import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/session';
 import { Sidebar } from '@/components/Sidebar';
+import { QrLogin } from '@/components/QrLogin';
+import { connectWhatsApp, getPublicState } from '@/server/whatsapp';
 
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardLayout({ children }) {
-  const session = await getSession();
+  connectWhatsApp().catch(() => {});
 
-  if (!session) {
-    return children;
+  const session = await getSession();
+  const state = getPublicState();
+
+  const linked = state.connected && state.authorized && state.user;
+
+  if (!linked) {
+    if (session) {
+      redirect('/api/auth/session-reset?redirect=/admin');
+    }
+    return <QrLogin />;
+  }
+
+  const sessionOk =
+    session && String(session.id_users) === String(state.user.id_users);
+
+  if (!sessionOk) {
+    if (session) {
+      redirect('/api/auth/session-reset?redirect=/admin');
+    }
+    return <QrLogin />;
   }
 
   return (

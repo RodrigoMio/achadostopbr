@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/session';
 import { listCatalog, listUserProducts } from '@/lib/products';
-import { getUserPromptIa, getUserWhatsappGroupName } from '@/lib/users';
+import { getUserPromptIa, getUserStoreUrl, getUserWhatsappGroupName } from '@/lib/users';
 import { ProductsBoard } from '@/components/ProductsBoard';
 
 export const dynamic = 'force-dynamic';
@@ -28,12 +28,14 @@ export default async function ProductsPage() {
   }
 
   try {
-    const [products, catalog, initialPrompt, initialWhatsappGroupName] = await Promise.all([
-      listUserProducts(session.id_users),
-      listCatalog(),
-      getUserPromptIa(session.id_users),
-      getUserWhatsappGroupName(session.id_users),
-    ]);
+    const [products, catalog, initialPrompt, initialWhatsappGroupName, initialStoreUrl] =
+      await Promise.all([
+        listUserProducts(session.id_users),
+        listCatalog(),
+        getUserPromptIa(session.id_users),
+        getUserWhatsappGroupName(session.id_users),
+        getUserStoreUrl(session.id_users),
+      ]);
 
     return (
       <ProductsBoard
@@ -42,6 +44,7 @@ export default async function ProductsPage() {
         platforms={catalog.platforms}
         initialPrompt={initialPrompt}
         initialWhatsappGroupName={initialWhatsappGroupName}
+        initialStoreUrl={initialStoreUrl}
       />
     );
   } catch (err) {

@@ -2,7 +2,6 @@ import { getSession } from '@/lib/session';
 import { getUserWhatsappGroupName } from '@/lib/users';
 import { listGroupCategories } from '@/lib/whatsappGroups';
 import { GroupsAdminBoard } from '@/components/GroupsAdminBoard';
-import { QrLogin } from '@/components/QrLogin';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,9 +16,6 @@ function GroupsLoadError({ message }) {
 
 export default async function AdminPage() {
   const session = await getSession();
-  if (!session) {
-    return <QrLogin />;
-  }
 
   try {
     const [categories, initialPrefix] = await Promise.all([

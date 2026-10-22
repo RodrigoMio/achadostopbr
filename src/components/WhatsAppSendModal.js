@@ -1,17 +1,67 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react';
-import { buildBuyDirectLine, formatProductPrice } from '@/lib/whatsappMessage';
+import { buildProductWhatsAppCaption } from '@/lib/whatsappMessage';
+import { isHttpUrl } from '@/utils/validateSendPayload';
 
 function displayText(value) {
   return value?.trim() ? value : '-';
+}
+
+function WhatsAppCaptionPreview({ caption }) {
+  const lines = caption?.split('\n') ?? [];
+
+  if (lines.length === 0 || !caption?.trim()) {
+    return <p className="text-sm text-slate-500">—</p>;
+  }
+
+  return (
+    <div className="space-y-1 text-sm text-slate-800">
+      {lines.map((line, index) => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          return <div key={`sp-${index}`} className="h-2" aria-hidden />;
+        }
+
+        if (isHttpUrl(trimmed)) {
+          return (
+            <a
+              key={`ln-${index}`}
+              href={trimmed}
+              target="_blank"
+              rel="noreferrer"
+              className="block break-all text-emerald-700 underline"
+            >
+              {trimmed}
+            </a>
+          );
+        }
+
+        const boldMatch = /^\*(.+)\*$/.exec(trimmed);
+        if (boldMatch) {
+          return (
+            <p key={`ln-${index}`} className="font-bold text-slate-900">
+              {boldMatch[1]}
+            </p>
+          );
+        }
+
+        return (
+          <p key={`ln-${index}`} className="whitespace-pre-wrap text-slate-600">
+            {line}
+          </p>
+        );
+      })}
+    </div>
+  );
 }
 
 export function WhatsAppSendModal({
   open,
   product,
   initialGroupName = '',
+  storeUrl = '',
   onClose,
   onProductUpdated,
   onGroupNameSaved,
@@ -22,6 +72,11 @@ export function WhatsAppSendModal({
   const [sending, setSending] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [confirmCount, setConfirmCount] = useState(null);
+
+  const caption = useMemo(
+    () => (product ? buildProductWhatsAppCaption(product, storeUrl) : ''),
+    [product, storeUrl],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -115,7 +170,6 @@ export function WhatsAppSendModal({
   }
 
   const busy = sending || confirming;
-  const previewPrice = formatProductPrice(product?.price);
 
   return (
     <>
@@ -155,24 +209,7 @@ export function WhatsAppSendModal({
                       Sem imagem
                     </div>
                   )}
-                  <p className="font-bold text-slate-900">{displayText(product?.title)}</p>
-                  <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600">
-                    {displayText(product?.ia_description)}
-                  </p>
-                  {previewPrice ? (
-                    <p className="mt-2 text-sm font-medium text-slate-800">{previewPrice}</p>
-                  ) : null}
-                  <p className="mt-2 text-sm text-slate-800">{buildBuyDirectLine(product)}</p>
-                  {product?.affiliated_link ? (
-                    <a
-                      href={product.affiliated_link}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-1 block break-all text-sm text-emerald-700 underline"
-                    >
-                      {product.affiliated_link}
-                    </a>
-                  ) : null}
+                  <WhatsAppCaptionPreview caption={caption} />
                 </div>
 
                 {error ? (

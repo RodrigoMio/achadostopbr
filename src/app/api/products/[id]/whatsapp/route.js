@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { asPositiveInt, asTrimmedString } from '@/lib/validation';
 import { getProductForUser, updateProductForUser } from '@/lib/products';
-import { updateUserWhatsappGroupName } from '@/lib/users';
+import { getUserStoreUrl, updateUserWhatsappGroupName } from '@/lib/users';
 import {
   buildProductWhatsAppCaption,
   filterGroupsByPrefix,
@@ -93,7 +93,8 @@ export async function POST(request, { params }) {
       );
     }
 
-    const caption = buildProductWhatsAppCaption(product);
+    const storeUrl = await getUserStoreUrl(session.id_users);
+    const caption = buildProductWhatsAppCaption(product, storeUrl);
     const failed = [];
     let sent = 0;
 

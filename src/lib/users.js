@@ -72,6 +72,18 @@ export async function getUserWhatsappGroupName(idUsers) {
   return data?.whatsapp_group_name ?? '';
 }
 
+export async function getUserStoreUrl(idUsers) {
+  const supabase = getServiceClient();
+  const { data, error } = await supabase
+    .from('users')
+    .select('store_url')
+    .eq('id_users', idUsers)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data?.store_url ?? '';
+}
+
 export async function updateUserWhatsappGroupName(idUsers, groupName) {
   const supabase = getServiceClient();
   const { data, error } = await supabase

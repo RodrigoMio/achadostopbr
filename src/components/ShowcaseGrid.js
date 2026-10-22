@@ -1,7 +1,8 @@
 'use client';
 
-import { Moon, Search, ShieldCheck, Sun } from 'lucide-react';
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { ChevronLeft, ChevronRight, MessageCircle, Moon, Search, ShieldCheck, Sun } from 'lucide-react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { WhatsAppBanner } from '@/components/showcase/WhatsAppBanner';
 import { WhatsAppCard } from '@/components/showcase/WhatsAppCard';
 import { getPlatformPresentation } from '@/lib/platforms';
@@ -15,6 +16,69 @@ function formatPrice(value) {
 function offerCountLabel(count) {
   if (count === 1) return '1 oferta encontrada';
   return `${count} ofertas encontradas`;
+}
+
+function CategoryScrollRow({ children }) {
+  const scrollRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateScrollState = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    setCanScrollLeft(el.scrollLeft > 2);
+    setCanScrollRight(maxScroll > 2 && el.scrollLeft < maxScroll - 2);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    updateScrollState();
+    const observer = new ResizeObserver(updateScrollState);
+    observer.observe(el);
+    el.addEventListener('scroll', updateScrollState, { passive: true });
+    return () => {
+      observer.disconnect();
+      el.removeEventListener('scroll', updateScrollState);
+    };
+  }, [updateScrollState, children]);
+
+  const scrollBy = (direction) => {
+    scrollRef.current?.scrollBy({ left: direction * 220, behavior: 'smooth' });
+  };
+
+  const arrowClass =
+    'hidden h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-card text-foreground transition hover:opacity-90 disabled:pointer-events-none disabled:opacity-30 md:inline-flex';
+
+  return (
+    <div className="flex min-w-0 items-center gap-1 md:gap-2">
+      <button
+        type="button"
+        className={arrowClass}
+        aria-label="Categorias anteriores"
+        disabled={!canScrollLeft}
+        onClick={() => scrollBy(-1)}
+      >
+        <ChevronLeft className="h-4 w-4" strokeWidth={2.5} />
+      </button>
+      <div
+        ref={scrollRef}
+        className="no-scrollbar flex min-w-0 flex-1 gap-2 overflow-x-auto pb-0.5"
+      >
+        {children}
+      </div>
+      <button
+        type="button"
+        className={arrowClass}
+        aria-label="Próximas categorias"
+        disabled={!canScrollRight}
+        onClick={() => scrollBy(1)}
+      >
+        <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
+      </button>
+    </div>
+  );
 }
 
 export function ShowcaseGrid({ profile, products, categories, platforms }) {
@@ -35,6 +99,16 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
     localStorage.setItem('theme', dark ? 'dark' : 'light');
   }, [dark, themeReady]);
 
+  const platformsWithOffers = useMemo(() => {
+    const ids = new Set(products.map((p) => String(p.id_platform)));
+    return platforms.filter((p) => ids.has(String(p.id_platform)));
+  }, [products, platforms]);
+
+  const categoriesWithOffers = useMemo(() => {
+    const ids = new Set(products.map((p) => String(p.id_category)));
+    return categories.filter((c) => ids.has(String(c.id_category)));
+  }, [products, categories]);
+
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
     return products.filter((product) => {
@@ -53,20 +127,17 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
     <div className={`showcase ${dark ? 'dark' : ''}`}>
       <header className="sticky top-0 z-30 border-b border-border bg-surface backdrop-blur-xl">
         <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="shrink-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={logoSrc}
-                alt="Buscador de Ofertas"
-                className="h-10 w-auto object-contain object-left sm:h-12"
+                alt="AchadosTopBr"
+                className="h-11 w-auto object-contain object-left sm:h-14"
               />
-              <p className="font-display hidden max-w-[8rem] truncate text-sm font-bold leading-tight text-foreground sm:block md:max-w-[10rem]">
-                {profile.name}
-              </p>
             </div>
 
-            <label className="relative mx-auto flex min-w-0 flex-1 max-w-xl items-center">
+            <label className="relative flex min-w-0 flex-1 items-center sm:max-w-xl lg:mx-auto">
               <Search
                 className="pointer-events-none absolute left-4 h-4 w-4 text-muted-foreground"
                 aria-hidden
@@ -79,6 +150,16 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
                 className="w-full rounded-full border border-border bg-card py-2.5 pl-11 pr-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:ring-2 focus:ring-[#f59e0b]/40"
               />
             </label>
+
+            <Link
+              href={groupsHref}
+              aria-label="Entrar no grupo"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:opacity-95 sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm"
+              style={{ background: 'linear-gradient(90deg, #25D366, #128C7E)' }}
+            >
+              <MessageCircle className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" strokeWidth={2} />
+              <span className="hidden sm:inline">Entrar no grupo</span>
+            </Link>
 
             <button
               type="button"
@@ -94,8 +175,6 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
             </button>
           </div>
 
-          <p className="font-display truncate text-sm font-bold text-foreground sm:hidden">{profile.name}</p>
-
           <div className="no-scrollbar flex gap-2 overflow-x-auto pb-0.5">
             <button
               type="button"
@@ -108,18 +187,20 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
             >
               Todas
             </button>
-            {platforms.map((item) => {
+            {platformsWithOffers.map((item) => {
               const selected = String(platformId) === String(item.id_platform);
               const pres = getPlatformPresentation(item);
               return (
                 <button
                   key={item.id_platform}
                   type="button"
+                  title={item.label || pres.name}
+                  aria-label={item.label || pres.name}
                   onClick={() => setPlatformId(String(item.id_platform))}
-                  className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                  className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition ${
                     selected
-                      ? 'border-transparent bg-card text-foreground ring-2 ring-[#f59e0b]'
-                      : 'border-border bg-card text-foreground hover:opacity-90'
+                      ? 'border-transparent bg-card ring-2 ring-[#f59e0b]'
+                      : 'border-border bg-card hover:opacity-90'
                   }`}
                 >
                   {pres.icon ? (
@@ -129,26 +210,27 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
                       alt=""
                       className="h-[22px] w-[22px] rounded-full object-contain"
                     />
-                  ) : null}
-                  {item.label}
+                  ) : (
+                    <span className="text-xs font-bold">{pres.name.slice(0, 1)}</span>
+                  )}
                 </button>
               );
             })}
           </div>
 
-          <div className="no-scrollbar flex gap-2 overflow-x-auto pb-0.5">
+          <CategoryScrollRow>
             <button
               type="button"
               onClick={() => setCategoryId('')}
               className={`inline-flex shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition sm:text-sm ${
                 categoryId === ''
                   ? 'bg-gradient-brand text-white shadow'
-                  : 'bg-muted text-foreground hover:opacity-90'
+                  : 'text-foreground hover:opacity-80'
               }`}
             >
-              Todos
+              Todas
             </button>
-            {categories.map((item) => {
+            {categoriesWithOffers.map((item) => {
               const selected = String(categoryId) === String(item.id_category);
               return (
                 <button
@@ -158,14 +240,14 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
                   className={`inline-flex shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition sm:text-sm ${
                     selected
                       ? 'bg-gradient-brand text-white shadow'
-                      : 'bg-muted text-foreground hover:opacity-90'
+                      : 'text-foreground hover:opacity-80'
                   }`}
                 >
                   {item.label}
                 </button>
               );
             })}
-          </div>
+          </CategoryScrollRow>
         </div>
       </header>
 
@@ -199,7 +281,7 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
             filtro.
           </p>
         ) : (
-          <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5 lg:grid-cols-4 2xl:grid-cols-5">
+          <ul className="grid grid-cols-2 gap-3 md:grid-cols-[repeat(auto-fill,minmax(0,242px))] md:justify-start md:gap-5">
             {filtered.map((product, i) => {
               const titleLabel = product.title?.trim() || '';
               const price = formatPrice(product.price);
@@ -222,8 +304,8 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
 
               return (
                 <Fragment key={product.id_product}>
-                <li>
-                  <article className="group flex h-full flex-col overflow-hidden rounded-2xl bg-card shadow-sm transition hover:-translate-y-1 hover:shadow-xl dark:border dark:border-border">
+                <li className="min-w-0 md:max-w-[242px]">
+                  <article className="group flex h-full w-full flex-col overflow-hidden rounded-2xl bg-card shadow-sm transition hover:-translate-y-1 hover:shadow-xl dark:border dark:border-border md:max-w-[242px]">
                     <div className="relative aspect-square overflow-hidden bg-muted">
                       {product.image_link ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -296,8 +378,10 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
                   </article>
                 </li>
                 {(i + 1) % 11 === 0 ? (
-                  <li>
-                    <WhatsAppCard href={groupsHref} />
+                  <li className="min-w-0 md:max-w-[242px]">
+                    <div className="w-full md:max-w-[242px]">
+                      <WhatsAppCard href={groupsHref} />
+                    </div>
                   </li>
                 ) : null}
                 </Fragment>

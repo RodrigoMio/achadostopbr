@@ -22,7 +22,17 @@ export function buildBuyDirectLine(product) {
   return platform ? `Compre direto em ${platform}` : 'Compre direto em';
 }
 
-export function buildProductWhatsAppCaption(product) {
+function appendCatalogLines(caption, storeUrl) {
+  const catalog = typeof storeUrl === 'string' ? storeUrl.trim() : '';
+  if (!catalog) {
+    return caption;
+  }
+  const base = caption.trim();
+  const suffix = `Catálogo completo em:\n${catalog}`;
+  return base ? `${base}\n\n${suffix}` : suffix;
+}
+
+export function buildProductWhatsAppCaption(product, storeUrl) {
   const parts = [];
   const title = product?.title?.trim();
   if (title) {
@@ -43,8 +53,6 @@ export function buildProductWhatsAppCaption(product) {
 
   const message = parts.join('\n\n');
   const link = String(product?.affiliated_link || '').trim();
-  if (!link) {
-    return message;
-  }
-  return buildAffiliateCaption(message, link);
+  let caption = link ? buildAffiliateCaption(message, link) : message;
+  return appendCatalogLines(caption, storeUrl);
 }
