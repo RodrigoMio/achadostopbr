@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, MessageCircle, Moon, Search, ShieldCheck, Sun } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MessageCircle, Moon, Search, Sun } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { WhatsAppBanner } from '@/components/showcase/WhatsAppBanner';
 import { WhatsAppCard } from '@/components/showcase/WhatsAppCard';
@@ -119,9 +119,14 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
     });
   }, [products, platformId, categoryId, query]);
 
-  const logoSrc = dark ? '/brand/logo-dark.png' : '/brand/logo-light.png';
+  const logoHorizontal = dark ? '/brand/logo-dark.png' : '/brand/logo-light.png';
+  const logoVertical = dark ? '/brand/logo-dark-vertical.png' : '/brand/logo-light-vertical.png';
   const slug = profile.slug || '';
   const groupsHref = slug ? `/${slug}/groups` : '#';
+  const showPlatformFilter = platformsWithOffers.length > 1;
+
+  const joinGroupStyle =
+    'items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-bold text-white shadow-lg transition hover:opacity-95 sm:px-4 sm:py-2.5';
 
   return (
     <div className={`showcase ${dark ? 'dark' : ''}`}>
@@ -131,9 +136,16 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
             <div className="shrink-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={logoSrc}
+                src={logoVertical}
                 alt="AchadosTopBr"
-                className="h-11 w-auto object-contain object-left sm:h-14"
+                className="h-10 w-auto object-contain object-left sm:hidden"
+              />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={logoHorizontal}
+                alt="AchadosTopBr"
+                className="hidden h-[100px] w-auto object-contain object-left sm:block"
+                style={{ marginTop: -30, marginBottom: -30 }}
               />
             </div>
 
@@ -154,11 +166,11 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
             <Link
               href={groupsHref}
               aria-label="Entrar no grupo"
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:opacity-95 sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm"
+              className={`${joinGroupStyle} hidden shrink-0 sm:inline-flex`}
               style={{ background: 'linear-gradient(90deg, #25D366, #128C7E)' }}
             >
-              <MessageCircle className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" strokeWidth={2} />
-              <span className="hidden sm:inline">Entrar no grupo</span>
+              <MessageCircle className="h-5 w-5 shrink-0" strokeWidth={2} />
+              Entrar no grupo
             </Link>
 
             <button
@@ -175,48 +187,50 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
             </button>
           </div>
 
-          <div className="no-scrollbar flex gap-2 overflow-x-auto pb-0.5">
-            <button
-              type="button"
-              onClick={() => setPlatformId('')}
-              className={`inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                platformId === ''
-                  ? 'bg-foreground text-white ring-2 ring-foreground/30'
-                  : 'border border-border bg-card text-foreground hover:opacity-90'
-              }`}
-            >
-              Todas
-            </button>
-            {platformsWithOffers.map((item) => {
-              const selected = String(platformId) === String(item.id_platform);
-              const pres = getPlatformPresentation(item);
-              return (
-                <button
-                  key={item.id_platform}
-                  type="button"
-                  title={item.label || pres.name}
-                  aria-label={item.label || pres.name}
-                  onClick={() => setPlatformId(String(item.id_platform))}
-                  className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition ${
-                    selected
-                      ? 'border-transparent bg-card ring-2 ring-[#f59e0b]'
-                      : 'border-border bg-card hover:opacity-90'
-                  }`}
-                >
-                  {pres.icon ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={pres.icon}
-                      alt=""
-                      className="h-[22px] w-[22px] rounded-full object-contain"
-                    />
-                  ) : (
-                    <span className="text-xs font-bold">{pres.name.slice(0, 1)}</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+          {showPlatformFilter ? (
+            <div className="no-scrollbar -mx-0.5 flex gap-2 overflow-x-auto overflow-y-visible px-0.5 py-1">
+              <button
+                type="button"
+                onClick={() => setPlatformId('')}
+                className={`inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  platformId === ''
+                    ? 'bg-white text-slate-900 ring-2 ring-slate-900/15'
+                    : 'border border-border bg-card text-foreground hover:opacity-90'
+                }`}
+              >
+                Todas
+              </button>
+              {platformsWithOffers.map((item) => {
+                const selected = String(platformId) === String(item.id_platform);
+                const pres = getPlatformPresentation(item);
+                return (
+                  <button
+                    key={item.id_platform}
+                    type="button"
+                    title={item.label || pres.name}
+                    aria-label={item.label || pres.name}
+                    onClick={() => setPlatformId(String(item.id_platform))}
+                    className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition ${
+                      selected
+                        ? 'border-transparent bg-card ring-2 ring-[#f59e0b] ring-offset-2 ring-offset-background'
+                        : 'border-border bg-card hover:opacity-90'
+                    }`}
+                  >
+                    {pres.icon ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={pres.icon}
+                        alt=""
+                        className="h-[22px] w-[22px] rounded-full object-contain"
+                      />
+                    ) : (
+                      <span className="text-xs font-bold">{pres.name.slice(0, 1)}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
 
           <CategoryScrollRow>
             <button
@@ -251,25 +265,8 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8">
-        <div className="mb-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <section className="flex items-start gap-3 rounded-2xl bg-card p-4 shadow-sm sm:items-center sm:gap-4 sm:p-5 dark:border dark:border-border">
-            <ShieldCheck
-              className="h-8 w-8 shrink-0 text-[#f59e0b] sm:h-10 sm:w-10"
-              strokeWidth={2}
-              aria-hidden
-            />
-            <div>
-              <h1 className="font-display text-base font-extrabold leading-snug text-foreground sm:text-lg">
-                As melhores ofertas, escolhidas a dedo nas maiores lojas do Brasil.
-              </h1>
-              <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-                Você compra direto no Mercado Livre, Shopee, Amazon ou Magalu — com toda a segurança e
-                garantia que elas oferecem.
-              </p>
-            </div>
-          </section>
-
+      <main className="mx-auto max-w-[1600px] px-4 py-6 pb-24 sm:px-6 sm:py-8 sm:pb-8">
+        <div className="mb-5">
           <WhatsAppBanner href={groupsHref} />
         </div>
 
@@ -390,6 +387,20 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
           </ul>
         )}
       </main>
+
+      <div
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-surface/95 p-3 backdrop-blur-md sm:hidden"
+        style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+      >
+        <Link
+          href={groupsHref}
+          className={`${joinGroupStyle} flex w-full sm:hidden`}
+          style={{ background: 'linear-gradient(90deg, #25D366, #128C7E)' }}
+        >
+          <MessageCircle className="h-5 w-5 shrink-0" strokeWidth={2} />
+          Entrar no grupo
+        </Link>
+      </div>
     </div>
   );
 }
