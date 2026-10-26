@@ -47,7 +47,7 @@ body {
 .showcase.dark {
   --color-background: oklch(0.17 0.03 262);
   --color-surface: oklch(0.17 0.03 262 / 0.85);
-  --color-card: oklch(0.22 0.035 262);
+  --color-card: oklch(0.35 0.02 263.1);
   --color-foreground: oklch(0.97 0.005 262);
   --color-muted: oklch(0.28 0.03 262);
   --color-muted-foreground: oklch(0.72 0.03 262);

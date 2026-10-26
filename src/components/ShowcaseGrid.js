@@ -22,13 +22,16 @@ function CategoryScrollRow({ children }) {
   const scrollRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const [hasOverflow, setHasOverflow] = useState(false);
 
   const updateScrollState = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
     const maxScroll = el.scrollWidth - el.clientWidth;
-    setCanScrollLeft(el.scrollLeft > 2);
-    setCanScrollRight(maxScroll > 2 && el.scrollLeft < maxScroll - 2);
+    const overflow = maxScroll > 2;
+    setHasOverflow(overflow);
+    setCanScrollLeft(overflow && el.scrollLeft > 2);
+    setCanScrollRight(overflow && el.scrollLeft < maxScroll - 2);
   }, []);
 
   useEffect(() => {
@@ -49,34 +52,38 @@ function CategoryScrollRow({ children }) {
   };
 
   const arrowClass =
-    'hidden h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-card text-foreground transition hover:opacity-90 disabled:pointer-events-none disabled:opacity-30 md:inline-flex';
+    'h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-card text-foreground transition hover:opacity-90 disabled:pointer-events-none disabled:opacity-30';
 
   return (
     <div className="flex min-w-0 items-center gap-1 md:gap-2">
-      <button
-        type="button"
-        className={arrowClass}
-        aria-label="Categorias anteriores"
-        disabled={!canScrollLeft}
-        onClick={() => scrollBy(-1)}
-      >
-        <ChevronLeft className="h-4 w-4" strokeWidth={2.5} />
-      </button>
+      {hasOverflow ? (
+        <button
+          type="button"
+          className={`${arrowClass} hidden md:inline-flex`}
+          aria-label="Categorias anteriores"
+          disabled={!canScrollLeft}
+          onClick={() => scrollBy(-1)}
+        >
+          <ChevronLeft className="h-4 w-4" strokeWidth={2.5} />
+        </button>
+      ) : null}
       <div
         ref={scrollRef}
         className="no-scrollbar flex min-w-0 flex-1 gap-2 overflow-x-auto pb-0.5"
       >
         {children}
       </div>
-      <button
-        type="button"
-        className={arrowClass}
-        aria-label="Próximas categorias"
-        disabled={!canScrollRight}
-        onClick={() => scrollBy(1)}
-      >
-        <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
-      </button>
+      {hasOverflow ? (
+        <button
+          type="button"
+          className={`${arrowClass} hidden md:inline-flex`}
+          aria-label="Próximas categorias"
+          disabled={!canScrollRight}
+          onClick={() => scrollBy(1)}
+        >
+          <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -130,7 +137,7 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
 
   return (
     <div className={`showcase ${dark ? 'dark' : ''}`}>
-      <header className="sticky top-0 z-30 border-b border-border bg-surface backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-border bg-card">
         <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 sm:px-6">
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="shrink-0">
@@ -187,81 +194,85 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
             </button>
           </div>
 
-          {showPlatformFilter ? (
-            <div className="no-scrollbar -mx-0.5 flex gap-2 overflow-x-auto overflow-y-visible px-0.5 py-1">
-              <button
-                type="button"
-                onClick={() => setPlatformId('')}
-                className={`inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  platformId === ''
-                    ? 'bg-white text-slate-900 ring-2 ring-slate-900/15'
-                    : 'border border-border bg-card text-foreground hover:opacity-90'
-                }`}
-              >
-                Todas
-              </button>
-              {platformsWithOffers.map((item) => {
-                const selected = String(platformId) === String(item.id_platform);
-                const pres = getPlatformPresentation(item);
-                return (
-                  <button
-                    key={item.id_platform}
-                    type="button"
-                    title={item.label || pres.name}
-                    aria-label={item.label || pres.name}
-                    onClick={() => setPlatformId(String(item.id_platform))}
-                    className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition ${
-                      selected
-                        ? 'border-transparent bg-card ring-2 ring-[#f59e0b] ring-offset-2 ring-offset-background'
-                        : 'border-border bg-card hover:opacity-90'
-                    }`}
-                  >
-                    {pres.icon ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={pres.icon}
-                        alt=""
-                        className="h-[22px] w-[22px] rounded-full object-contain"
-                      />
-                    ) : (
-                      <span className="text-xs font-bold">{pres.name.slice(0, 1)}</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          ) : null}
-
-          <CategoryScrollRow>
-            <button
-              type="button"
-              onClick={() => setCategoryId('')}
-              className={`inline-flex shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition sm:text-sm ${
-                categoryId === ''
-                  ? 'bg-gradient-brand text-white shadow'
-                  : 'text-foreground hover:opacity-80'
-              }`}
-            >
-              Todas
-            </button>
-            {categoriesWithOffers.map((item) => {
-              const selected = String(categoryId) === String(item.id_category);
-              return (
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-5">
+            {showPlatformFilter ? (
+              <div className="no-scrollbar -mx-0.5 flex shrink-0 gap-2 overflow-x-auto overflow-y-visible px-0.5 py-1 md:overflow-visible">
                 <button
-                  key={item.id_category}
                   type="button"
-                  onClick={() => setCategoryId(String(item.id_category))}
+                  onClick={() => setPlatformId('')}
+                  className={`inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    platformId === ''
+                      ? 'bg-white text-slate-900 ring-2 ring-slate-900/15'
+                      : 'border border-border bg-background text-foreground hover:opacity-90'
+                  }`}
+                >
+                  Todas
+                </button>
+                {platformsWithOffers.map((item) => {
+                  const selected = String(platformId) === String(item.id_platform);
+                  const pres = getPlatformPresentation(item);
+                  return (
+                    <button
+                      key={item.id_platform}
+                      type="button"
+                      title={item.label || pres.name}
+                      aria-label={item.label || pres.name}
+                      onClick={() => setPlatformId(String(item.id_platform))}
+                      className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition ${
+                        selected
+                          ? 'border-transparent bg-background ring-2 ring-[#f59e0b] ring-offset-2 ring-offset-card'
+                          : 'border-border bg-background hover:opacity-90'
+                      }`}
+                    >
+                      {pres.icon ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={pres.icon}
+                          alt=""
+                          className="h-[22px] w-[22px] rounded-full object-contain"
+                        />
+                      ) : (
+                        <span className="text-xs font-bold">{pres.name.slice(0, 1)}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            <div className="min-w-0 flex-1">
+              <CategoryScrollRow>
+                <button
+                  type="button"
+                  onClick={() => setCategoryId('')}
                   className={`inline-flex shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition sm:text-sm ${
-                    selected
+                    categoryId === ''
                       ? 'bg-gradient-brand text-white shadow'
                       : 'text-foreground hover:opacity-80'
                   }`}
                 >
-                  {item.label}
+                  Todas
                 </button>
-              );
-            })}
-          </CategoryScrollRow>
+                {categoriesWithOffers.map((item) => {
+                  const selected = String(categoryId) === String(item.id_category);
+                  return (
+                    <button
+                      key={item.id_category}
+                      type="button"
+                      onClick={() => setCategoryId(String(item.id_category))}
+                      className={`inline-flex shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition sm:text-sm ${
+                        selected
+                          ? 'bg-gradient-brand text-white shadow'
+                          : 'text-foreground hover:opacity-80'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </CategoryScrollRow>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -302,7 +313,7 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
               return (
                 <Fragment key={product.id_product}>
                 <li className="min-w-0 md:max-w-[242px]">
-                  <article className="group flex h-full w-full flex-col overflow-hidden rounded-2xl bg-card shadow-sm transition hover:-translate-y-1 hover:shadow-xl dark:border dark:border-border md:max-w-[242px]">
+                  <article className="group flex h-full w-full flex-col overflow-hidden rounded-2xl bg-card shadow-sm transition hover:-translate-y-1 hover:shadow-xl md:max-w-[242px]">
                     <div className="relative aspect-square overflow-hidden bg-muted">
                       {product.image_link ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -331,7 +342,7 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
 
                     <div className="flex flex-1 flex-col gap-2 p-3 sm:gap-2.5 sm:p-4">
                       {product.category?.label ? (
-                        <span className="inline-block max-w-full truncate rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground sm:text-[11px]">
+                        <span className="inline-block max-w-min truncate rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-900 dark:bg-sky-200/90 dark:text-sky-950 sm:text-[11px]">
                           {product.category.label}
                         </span>
                       ) : null}
