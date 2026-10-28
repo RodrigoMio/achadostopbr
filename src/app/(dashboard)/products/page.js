@@ -39,6 +39,7 @@ export default async function ProductsPage() {
 
     return (
       <ProductsBoard
+        userId={session.id_users}
         initialProducts={products}
         categories={catalog.categories}
         platforms={catalog.platforms}

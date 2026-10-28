@@ -5,6 +5,7 @@ import { getProductForUser, updateProductForUser } from '@/lib/products';
 import { getUserStoreUrl, updateUserWhatsappGroupName } from '@/lib/users';
 import {
   buildProductWhatsAppCaption,
+  filterGroupsByJids,
   filterGroupsByPrefix,
 } from '@/lib/whatsappMessage';
 import {
@@ -19,6 +20,23 @@ const SEND_GAP_MS = 1000;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function parseGroupJids(body) {
+  if (!Object.prototype.hasOwnProperty.call(body ?? {}, 'group_jids')) {
+    return null;
+  }
+  const raw = body.group_jids;
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return [
+    ...new Set(
+      raw
+        .map((jid) => asTrimmedString(jid))
+        .filter(Boolean),
+    ),
+  ];
 }
 
 export async function POST(request, { params }) {
@@ -65,10 +83,19 @@ export async function POST(request, { params }) {
     );
     const product = current;
 
-    const groups = filterGroupsByPrefix(
-      await listParticipatingGroups(),
-      groupName,
-    );
+    const participating = await listParticipatingGroups();
+    const requestedJids = parseGroupJids(body);
+    let groups;
+    let invalidJids = [];
+
+    if (requestedJids !== null) {
+      groups = filterGroupsByJids(participating, requestedJids);
+      const validSet = new Set(groups.map((group) => group.jid));
+      invalidJids = requestedJids.filter((jid) => !validSet.has(jid));
+    } else {
+      groups = filterGroupsByPrefix(participating, groupName);
+    }
+
     const confirm = body.confirm === true;
 
     if (!confirm) {
@@ -77,6 +104,7 @@ export async function POST(request, { params }) {
         whatsapp_group_name: savedGroupName,
         count: groups.length,
         groups,
+        invalid_jids: invalidJids,
       });
     }
 
@@ -129,6 +157,7 @@ export async function POST(request, { params }) {
       count: groups.length,
       sent,
       failed,
+      invalid_jids: invalidJids,
     });
   } catch (err) {
     console.error('[products whatsapp]', err);

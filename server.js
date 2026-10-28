@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { createServer } from 'http';
 import { parse } from 'url';
 import next from 'next';
-import { isPublicOnly } from './src/lib/config.js';
+import { isInstagramConfigured, isPublicOnly } from './src/lib/config.js';
 
 const dev = process.argv.includes('--dev');
 if (!dev && !process.env.NODE_ENV) {
@@ -36,6 +36,17 @@ if (isPublicOnly()) {
   connectWhatsApp().catch((err) => {
     console.error('[WhatsApp] Falha na inicialização:', err);
   });
+}
+
+if (isInstagramConfigured()) {
+  const { startInstagram } = await import('./src/server/instagram.js');
+  startInstagram().catch((err) => {
+    console.error('[Instagram] Falha na inicialização:', err);
+  });
+} else {
+  console.warn(
+    '[Instagram] META_ACCESS_TOKEN ou INSTAGRAM_BUSINESS_ACCOUNT_ID em falta — publicação desligada.',
+  );
 }
 
 const server = createServer(async (req, res) => {

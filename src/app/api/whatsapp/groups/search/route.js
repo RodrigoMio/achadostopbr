@@ -42,10 +42,22 @@ export async function POST(request) {
     );
   }
 
+  const includeInvites = body?.include_invites !== false;
+
   try {
     assertWhatsAppForUser(session.id_users);
 
     const filtered = filterGroupsByPrefix(await listParticipatingGroups(), prefix);
+
+    if (!includeInvites) {
+      const groups = filtered.map((waGroup) => ({
+        whatsapp_group_id: waGroup.jid,
+        name: waGroup.name,
+        current_members: waGroup.memberCount ?? 0,
+      }));
+      return NextResponse.json({ prefix, count: groups.length, groups });
+    }
+
     const jids = filtered.map((group) => group.jid);
     const savedRows = await listWhatsappGroupsForUserByJids(session.id_users, jids);
     const savedByJid = new Map(savedRows.map((row) => [row.whatsapp_group_id, row]));

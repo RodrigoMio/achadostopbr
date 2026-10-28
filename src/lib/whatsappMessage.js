@@ -11,6 +11,16 @@ export function filterGroupsByPrefix(groups, prefix) {
   );
 }
 
+export function filterGroupsByJids(groups, jids) {
+  const wanted = new Set(
+    (jids ?? [])
+      .map((jid) => (typeof jid === 'string' ? jid.trim() : ''))
+      .filter(Boolean),
+  );
+  if (wanted.size === 0) return [];
+  return (groups ?? []).filter((group) => wanted.has(group.jid));
+}
+
 export function formatProductPrice(value) {
   const amount = Number(value) || 0;
   if (amount <= 0) return '';

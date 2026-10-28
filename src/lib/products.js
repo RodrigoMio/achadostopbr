@@ -5,7 +5,33 @@ import { getUserPromptIa } from './users.js';
 import { getServiceClient } from './supabase.js';
 import { asPositiveInt, asTrimmedString, isHttpUrl } from './validation.js';
 
+const PRODUCT_SELECT_RELATIONS = `
+  category:id_category ( id_category, label ),
+  platform:id_platform ( id_platform, label, url_icon ),
+  status:id_status ( id_status, label, color_hex )
+`;
+
 const PRODUCT_SELECT = `
+  id_product,
+  title,
+  product_link,
+  image_link,
+  affiliated_link,
+  ia_description,
+  price,
+  whatsapp_group_name,
+  whatsapp_sent,
+  instagram_sent,
+  id_users,
+  id_status,
+  id_platform,
+  id_category,
+  created_at,
+  updated_at,
+  ${PRODUCT_SELECT_RELATIONS}
+`;
+
+const PRODUCT_SELECT_FALLBACK = `
   id_product,
   title,
   product_link,
@@ -21,10 +47,17 @@ const PRODUCT_SELECT = `
   id_category,
   created_at,
   updated_at,
-  category:id_category ( id_category, label ),
-  platform:id_platform ( id_platform, label, url_icon ),
-  status:id_status ( id_status, label, color_hex )
+  ${PRODUCT_SELECT_RELATIONS}
 `;
+
+function isUnknownColumn(error, column) {
+  const haystack = `${error?.code || ''} ${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`.toLowerCase();
+  return haystack.includes(column.toLowerCase()) && (
+    String(error?.code) === '42703' ||
+    haystack.includes('does not exist') ||
+    haystack.includes('schema cache')
+  );
+}
 
 const PRODUCT_EDIT_KEYS = [
   'product_link',
@@ -48,6 +81,7 @@ export function mapProduct(row) {
     price: Number(row.price) || 0,
     whatsapp_group_name: row.whatsapp_group_name ?? null,
     whatsapp_sent: row.whatsapp_sent ?? null,
+    instagram_sent: row.instagram_sent ?? null,
     id_users: row.id_users,
     id_status: row.id_status,
     id_platform: row.id_platform,
@@ -120,15 +154,25 @@ export function parseProductWritePayload(body) {
   };
 }
 
+async function selectProductRows(execute) {
+  let result = await execute(PRODUCT_SELECT);
+  if (result.error && isUnknownColumn(result.error, 'instagram_sent')) {
+    result = await execute(PRODUCT_SELECT_FALLBACK);
+  }
+  return result;
+}
+
 export async function updateProductForUser(idProduct, idUsers, updates) {
   const supabase = getServiceClient();
-  const { data, error } = await supabase
-    .from('product')
-    .update(updates)
-    .eq('id_product', idProduct)
-    .eq('id_users', idUsers)
-    .select(PRODUCT_SELECT)
-    .single();
+  const { data, error } = await selectProductRows((select) =>
+    supabase
+      .from('product')
+      .update(updates)
+      .eq('id_product', idProduct)
+      .eq('id_users', idUsers)
+      .select(select)
+      .single(),
+  );
 
   if (error) throw error;
   return mapProduct(data);
@@ -136,11 +180,13 @@ export async function updateProductForUser(idProduct, idUsers, updates) {
 
 export async function listUserProducts(idUsers) {
   const supabase = getServiceClient();
-  const { data, error } = await supabase
-    .from('product')
-    .select(PRODUCT_SELECT)
-    .eq('id_users', idUsers)
-    .order('created_at', { ascending: false });
+  const { data, error } = await selectProductRows((select) =>
+    supabase
+      .from('product')
+      .select(select)
+      .eq('id_users', idUsers)
+      .order('created_at', { ascending: false }),
+  );
 
   if (error) throw error;
   return (data ?? []).map(mapProduct);
@@ -148,15 +194,30 @@ export async function listUserProducts(idUsers) {
 
 export async function getProductForUser(idProduct, idUsers) {
   const supabase = getServiceClient();
-  const { data, error } = await supabase
-    .from('product')
-    .select(PRODUCT_SELECT)
-    .eq('id_product', idProduct)
-    .eq('id_users', idUsers)
-    .maybeSingle();
+  const { data, error } = await selectProductRows((select) =>
+    supabase
+      .from('product')
+      .select(select)
+      .eq('id_product', idProduct)
+      .eq('id_users', idUsers)
+      .maybeSingle(),
+  );
 
   if (error) throw error;
   return mapProduct(data);
+}
+
+/** Metadados mínimos para proxy de imagem (Instagram / Meta). */
+export async function getProductPublishImageMeta(idProduct) {
+  const supabase = getServiceClient();
+  const { data, error } = await supabase
+    .from('product')
+    .select('id_product, image_link, updated_at')
+    .eq('id_product', idProduct)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ?? null;
 }
 
 export async function listCatalog() {
@@ -214,12 +275,14 @@ export async function runProductAi(product) {
   };
 
   const supabase = getServiceClient();
-  const { data, error } = await supabase
-    .from('product')
-    .update(updates)
-    .eq('id_product', product.id_product)
-    .select(PRODUCT_SELECT)
-    .single();
+  const { data, error } = await selectProductRows((select) =>
+    supabase
+      .from('product')
+      .update(updates)
+      .eq('id_product', product.id_product)
+      .select(select)
+      .single(),
+  );
 
   if (error) throw error;
   return mapProduct(data);

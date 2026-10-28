@@ -196,14 +196,14 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
 
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-5">
             {showPlatformFilter ? (
-              <div className="no-scrollbar -mx-0.5 flex shrink-0 gap-2 overflow-x-auto overflow-y-visible px-0.5 py-1 md:overflow-visible">
+              <div className="no-scrollbar flex shrink-0 gap-1.5 overflow-x-auto overflow-y-visible rounded-full bg-muted p-1 md:overflow-visible">
                 <button
                   type="button"
                   onClick={() => setPlatformId('')}
-                  className={`inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  className={`inline-flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-sm font-semibold transition ${
                     platformId === ''
                       ? 'bg-white text-slate-900 ring-2 ring-slate-900/15'
-                      : 'border border-border bg-background text-foreground hover:opacity-90'
+                      : 'border border-border bg-card text-foreground hover:opacity-90'
                   }`}
                 >
                   Todas
@@ -218,10 +218,10 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
                       title={item.label || pres.name}
                       aria-label={item.label || pres.name}
                       onClick={() => setPlatformId(String(item.id_platform))}
-                      className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition ${
+                      className={`inline-flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-full border p-0.5 transition ${
                         selected
-                          ? 'border-transparent bg-background ring-2 ring-[#f59e0b] ring-offset-2 ring-offset-card'
-                          : 'border-border bg-background hover:opacity-90'
+                          ? 'border-transparent bg-card ring-2 ring-[#f59e0b] ring-offset-2 ring-offset-muted'
+                          : 'border-border bg-card hover:opacity-90'
                       }`}
                     >
                       {pres.icon ? (
@@ -229,10 +229,10 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
                         <img
                           src={pres.icon}
                           alt=""
-                          className="h-[22px] w-[22px] rounded-full object-contain"
+                          className="h-[44px] w-[44px] rounded-full object-contain"
                         />
                       ) : (
-                        <span className="text-xs font-bold">{pres.name.slice(0, 1)}</span>
+                        <span className="text-sm font-bold">{pres.name.slice(0, 1)}</span>
                       )}
                     </button>
                   );
@@ -240,7 +240,7 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
               </div>
             ) : null}
 
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 rounded-full bg-muted p-1">
               <CategoryScrollRow>
                 <button
                   type="button"
