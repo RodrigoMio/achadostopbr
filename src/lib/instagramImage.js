@@ -1,5 +1,6 @@
 import { createHmac } from 'node:crypto';
 import { config } from './config.js';
+import { missingPublicAppUrlMessage } from './publicOrigin.js';
 import { isHttpsUrl } from './validation.js';
 
 const META_UA =
@@ -21,15 +22,10 @@ export function verifyPublishImageSignature(product, sig) {
   return sig.length === expected.length && sig === expected;
 }
 
-export function resolvePublicAppBaseUrl(fallbackOrigin = '') {
-  const fromEnv = String(
-    process.env.PUBLIC_APP_URL || process.env.NEXT_PUBLIC_APP_URL || '',
-  ).trim();
-  const base = (fromEnv || fallbackOrigin || '').replace(/\/+$/, '');
+function normalizePublicBaseUrl(candidate, requestOriginHint = '') {
+  const base = String(candidate || '').trim().replace(/\/+$/, '');
   if (!base) {
-    const err = new Error(
-      'Defina PUBLIC_APP_URL no .env com o domínio HTTPS público da app (ex.: https://www.achadostopbr.com.br). A Meta precisa descarregar a imagem desse servidor.',
-    );
+    const err = new Error(missingPublicAppUrlMessage(requestOriginHint));
     err.status = 400;
     throw err;
   }
@@ -40,12 +36,20 @@ export function resolvePublicAppBaseUrl(fallbackOrigin = '') {
   }
   if (/localhost|127\.0\.0\.1/i.test(base)) {
     const err = new Error(
-      'PUBLIC_APP_URL não pode ser localhost. Use o domínio público ou um túnel HTTPS (ngrok) apontando para esta app.',
+      'PUBLIC_APP_URL não pode ser localhost. Use o domínio público onde a app está deployada (ex.: https://www.achadostopbr.com.br).',
     );
     err.status = 400;
     throw err;
   }
   return base;
+}
+
+/** Prioridade: origem do request (produção) → PUBLIC_APP_URL no env. */
+export function resolvePublicAppBaseUrl(requestOrigin = '', requestOriginHint = '') {
+  const fromRequest = String(requestOrigin || '').trim();
+  const fromEnv = config.publicAppUrl;
+  const base = fromRequest || fromEnv || '';
+  return normalizePublicBaseUrl(base, requestOriginHint || fromRequest);
 }
 
 export function buildInstagramProxyImageUrl(product, publicBaseUrl) {

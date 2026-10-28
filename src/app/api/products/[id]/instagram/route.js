@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { INSTAGRAM_CAPTION_MAX } from '@/lib/instagram';
+import { getPublicOriginFromRequest } from '@/lib/publicOrigin';
 import { asPositiveInt, asTrimmedString } from '@/lib/validation';
 import { getProductForUser } from '@/lib/products';
 import {
@@ -91,11 +92,13 @@ export async function POST(request, { params }) {
       });
     }
 
+    const requestOrigin = getPublicOriginFromRequest(request);
     const result = await publishProductToInstagram({
       product,
       caption,
       idUsers: session.id_users,
-      publicAppBaseUrl: '',
+      publicAppBaseUrl: requestOrigin,
+      publicAppOriginHint: requestOrigin || new URL(request.url).origin,
     });
 
     return NextResponse.json({

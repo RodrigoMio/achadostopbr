@@ -31,6 +31,9 @@ export const config = {
   ),
   metaGraphVersion: trimEnv(process.env.META_GRAPH_API_VERSION) || 'v21.0',
   metaGraphHost: trimEnv(process.env.META_GRAPH_HOST) || 'https://graph.facebook.com',
+  publicAppUrl: trimEnv(
+    process.env.PUBLIC_APP_URL || process.env.NEXT_PUBLIC_APP_URL,
+  ),
 };
 
 export function getGeminiModelCandidates() {
@@ -70,4 +73,8 @@ export function getMetaGraphBaseUrl() {
   const host = config.metaGraphHost.replace(/\/+$/, '');
   const version = config.metaGraphVersion.replace(/^\/+|\/+$/g, '');
   return `${host}/${version}`;
+}
+
+export function isPublicAppUrlConfigured() {
+  return Boolean(config.publicAppUrl);
 }

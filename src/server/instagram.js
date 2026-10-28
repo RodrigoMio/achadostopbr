@@ -2,6 +2,7 @@ import {
   config,
   isInstagramConfigured,
   isInstagramWebhookConfigured,
+  isPublicAppUrlConfigured,
 } from '../lib/config.js';
 import {
   buildInstagramDmText,
@@ -63,6 +64,7 @@ export function getInstagramPublicState() {
     webhookConfigured: state.webhookConfigured,
     permissionsOk: state.permissionsOk,
     missingPermissions: state.missingPermissions,
+    publicAppUrlConfigured: isPublicAppUrlConfigured(),
     username: state.username,
     lastError: state.lastError,
     checkedAt: state.checkedAt,
@@ -129,6 +131,14 @@ export async function startInstagram() {
     );
   }
 
+  if (isPublicAppUrlConfigured()) {
+    console.log('[Instagram] PUBLIC_APP_URL configurado para proxy de imagem.');
+  } else {
+    console.warn(
+      '[Instagram] PUBLIC_APP_URL em falta — ao publicar pelo localhost, defina no .env o domínio HTTPS de produção.',
+    );
+  }
+
   state.checkedAt = new Date().toISOString();
   return getInstagramPublicState();
 }
@@ -138,10 +148,14 @@ export async function publishProductToInstagram({
   caption,
   idUsers,
   publicAppBaseUrl,
+  publicAppOriginHint = '',
 }) {
   assertInstagramPublishReady();
 
-  const publicBase = resolvePublicAppBaseUrl(publicAppBaseUrl || '');
+  const publicBase = resolvePublicAppBaseUrl(
+    publicAppBaseUrl || '',
+    publicAppOriginHint,
+  );
   await downloadProductImage(product.image_link);
   const imageUrl = buildInstagramProxyImageUrl(product, publicBase);
 
