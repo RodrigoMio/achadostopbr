@@ -31,6 +31,35 @@ export function asPositiveInt(value) {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
+/** Preço opcional: vazio → 0; aceita número ou string mascarada (ex.: R$ 9,99). */
+export function parseNonNegativePrice(value) {
+  if (value === undefined || value === null || value === '') {
+    return { ok: true, value: 0 };
+  }
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value) || value < 0) {
+      return { ok: false, error: 'Preço inválido.' };
+    }
+    return { ok: true, value };
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return { ok: true, value: 0 };
+    }
+    const digits = trimmed.replace(/\D/g, '');
+    if (!digits) {
+      return { ok: true, value: 0 };
+    }
+    const amount = Number(digits) / 100;
+    if (!Number.isFinite(amount) || amount < 0) {
+      return { ok: false, error: 'Preço inválido.' };
+    }
+    return { ok: true, value: amount };
+  }
+  return { ok: false, error: 'Preço inválido.' };
+}
+
 /** Mercado Livre / mlstatic: .webp no path → .jpg (CDN serve JPEG com o mesmo path). */
 export function normalizeProductImageLink(url) {
   const trimmed = asTrimmedString(url);

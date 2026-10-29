@@ -48,7 +48,6 @@ export async function POST(request) {
       .from('product')
       .insert({
         ...parsed.values,
-        price: 0,
         id_users: session.id_users,
         id_status: STATUS.GENERATE_IA,
       })

@@ -35,7 +35,7 @@ export default async function DashboardLayout({ children }) {
     <div className="min-h-screen lg:flex">
       <Sidebar user={session} />
       <div className="min-h-screen flex-1 lg:min-w-0">
-        <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+        <main className="flex min-h-screen w-full flex-col px-4 py-6 sm:px-6 lg:px-8">{children}</main>
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import {
   asTrimmedString,
   isHttpUrl,
   normalizeProductImageLink,
+  parseNonNegativePrice,
 } from './validation.js';
 
 const PRODUCT_SELECT_RELATIONS = `
@@ -72,6 +73,7 @@ const PRODUCT_EDIT_KEYS = [
   'ia_description',
   'id_category',
   'id_platform',
+  'price',
 ];
 
 export function mapProduct(row) {
@@ -145,6 +147,11 @@ export function parseProductWritePayload(body) {
     return { ok: false, error: 'Descrição deve ter no máximo 1500 caracteres.' };
   }
 
+  const priceParsed = parseNonNegativePrice(payload.price);
+  if (!priceParsed.ok) {
+    return { ok: false, error: priceParsed.error };
+  }
+
   return {
     ok: true,
     values: {
@@ -155,6 +162,7 @@ export function parseProductWritePayload(body) {
       ia_description: iaDescription || null,
       id_platform: idPlatform,
       id_category: idCategory,
+      price: priceParsed.value,
     },
   };
 }

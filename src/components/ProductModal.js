@@ -2,6 +2,17 @@
 
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle, Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headlessui/react';
 
+function formatPriceMaskFromDigits(digits) {
+  if (!digits) return '';
+  const amount = Number(digits) / 100;
+  return amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function maskPriceInput(raw) {
+  const digits = raw.replace(/\D/g, '').slice(0, 11);
+  return formatPriceMaskFromDigits(digits);
+}
+
 function SelectField({ label, value, onChange, options, getId, getLabel, required }) {
   const selected = options.find((item) => getId(item) === value) || null;
 
@@ -111,6 +122,19 @@ export function ProductModal({
                 getId={(item) => item.id_platform}
                 getLabel={(item) => item.label}
               />
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-slate-700">Preço</span>
+                <input
+                  inputMode="numeric"
+                  placeholder="R$ 0,00"
+                  value={form.price ?? ''}
+                  onChange={(e) =>
+                    setForm((current) => ({ ...current, price: maskPriceInput(e.target.value) }))
+                  }
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                />
+                <span className="mt-1 block text-xs text-slate-400">Opcional. Zero é permitido.</span>
+              </label>
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-slate-700">
                   Título (gerado por I.A.)

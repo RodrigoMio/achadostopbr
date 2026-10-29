@@ -16,6 +16,7 @@ const EMPTY_FORM = {
   id_platform: '',
   title: '',
   ia_description: '',
+  price: '',
 };
 
 const PAGE_SIZE = 12;
@@ -35,6 +36,14 @@ function displayText(value) {
   return value?.trim() ? value : '-';
 }
 
+function priceAmountToFormMask(amount) {
+  const n = Number(amount);
+  if (!Number.isFinite(n) || n <= 0) return '';
+  const cents = Math.round(n * 100);
+  const digits = String(cents);
+  return (Number(digits) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
 function formFromProduct(product) {
   return {
     id_category: product.id_category ?? '',
@@ -44,6 +53,7 @@ function formFromProduct(product) {
     id_platform: product.id_platform ?? '',
     title: product.title ?? '',
     ia_description: product.ia_description ?? '',
+    price: priceAmountToFormMask(product.price),
   };
 }
 
@@ -252,7 +262,7 @@ export function ProductsBoard({
   }
 
   return (
-    <section>
+    <section className="flex min-h-0 flex-1 flex-col">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Meus produtos publicados</h1>
@@ -281,25 +291,24 @@ export function ProductsBoard({
         </div>
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <div className="max-h-[70vh] overflow-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="sticky top-0 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+      <div className="mt-6 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="min-h-0 flex-1 overflow-auto">
+          <table className="w-full table-fixed text-left text-sm">
+            <thead className="sticky top-0 z-10 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-4 py-3 font-semibold">Título</th>
-                <th className="px-4 py-3 font-semibold">Categoria</th>
-                <th className="px-4 py-3 font-semibold">Plataforma</th>
+                <th className="px-4 py-3 font-semibold">Categoria / Plataforma</th>
                 <th className="px-4 py-3 font-semibold">Preço</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
                 <th className="px-4 py-3 font-semibold">Criação</th>
                 <th className="px-4 py-3 font-semibold">Envio WhatsApp</th>
-                <th className="px-4 py-3 font-semibold">Ações</th>
+                <th className="min-w-[155px] px-4 py-3 font-semibold lg:w-[155px]">Ações</th>
               </tr>
             </thead>
             <tbody>
               {visible.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-16 text-center text-slate-500">
+                  <td colSpan={7} className="px-4 py-16 text-center text-slate-500">
                     Nenhum produto cadastrado ainda.
                   </td>
                 </tr>
@@ -312,8 +321,10 @@ export function ProductsBoard({
                         {displayText(product.ia_description)}
                       </p>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{product.category?.label || '-'}</td>
-                    <td className="px-4 py-3 text-slate-600">{product.platform?.label || '-'}</td>
+                    <td className="px-4 py-3 text-slate-600">
+                      <p className="font-medium text-slate-700">{product.category?.label || '-'}</p>
+                      <p className="mt-0.5 text-xs text-slate-500">{product.platform?.label || '-'}</p>
+                    </td>
                     <td className="px-4 py-3 text-slate-600">{formatPrice(product.price)}</td>
                     <td className="px-4 py-3">
                       <StatusBadge status={product.status} />
@@ -326,7 +337,7 @@ export function ProductsBoard({
                         ? formatDate(product.whatsapp_sent)
                         : 'Não enviado'}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="min-w-[155px] px-4 py-3 lg:w-[155px]">
                       <div className="flex flex-wrap items-center gap-2">
                         <button
                           type="button"
