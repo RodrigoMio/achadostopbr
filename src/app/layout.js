@@ -15,6 +15,10 @@ export default function RootLayout({ children }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
+        <meta
+          name="facebook-domain-verification"
+          content="namkuvr6c1andpni4h5sq51uw0cp95"
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
