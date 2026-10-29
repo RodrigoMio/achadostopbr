@@ -169,3 +169,35 @@ export async function updateCommentDm(id, updates) {
     .eq('id_instagram_comment_dm', id);
   if (error) throw error;
 }
+
+export async function listRecentInstagramPosts(limit = 5) {
+  const supabase = getServiceClient();
+  const { data, error } = await supabase
+    .from('instagram_post')
+    .select('id_instagram_post, id_product, ig_media_id, permalink, published_at')
+    .order('published_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    if (isMissingRelation(error)) throw migrationError(error);
+    throw error;
+  }
+  return data ?? [];
+}
+
+export async function listRecentCommentDms(limit = 10) {
+  const supabase = getServiceClient();
+  const { data, error } = await supabase
+    .from('instagram_comment_dm')
+    .select(
+      'id_instagram_comment_dm, ig_comment_id, ig_commenter_id, comment_text, matched, dm_status, dm_error, created_at, processed_at',
+    )
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    if (isMissingRelation(error)) throw migrationError(error);
+    throw error;
+  }
+  return data ?? [];
+}

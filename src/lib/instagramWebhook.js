@@ -57,7 +57,10 @@ export async function POST(request) {
   }
 
   try {
-    await processInstagramWebhookBody(body);
+    const results = await processInstagramWebhookBody(body);
+    if (results.length === 0 && body?.object) {
+      console.log('[Instagram] webhook POST ok, sem eventos comments processados.');
+    }
   } catch (err) {
     console.error('[Instagram] webhook', err);
   }

@@ -30,3 +30,16 @@ export function asPositiveInt(value) {
   const n = Number(value);
   return Number.isInteger(n) && n > 0 ? n : null;
 }
+
+/** Mercado Livre / mlstatic: .webp no path → .jpg (CDN serve JPEG com o mesmo path). */
+export function normalizeProductImageLink(url) {
+  const trimmed = asTrimmedString(url);
+  if (!trimmed || !/\.webp/i.test(trimmed)) return trimmed;
+  try {
+    const parsed = new URL(trimmed);
+    parsed.pathname = parsed.pathname.replace(/\.webp/gi, '.jpg');
+    return parsed.toString();
+  } catch {
+    return trimmed.replace(/\.webp/gi, '.jpg');
+  }
+}

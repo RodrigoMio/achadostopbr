@@ -10,9 +10,15 @@ export function graphErrorMessage(payload, fallback = 'Falha na API do Instagram
 }
 
 export function createGraphError(payload, fallback) {
-  const err = new Error(graphErrorMessage(payload, fallback));
+  let message = graphErrorMessage(payload, fallback);
+  const code = payload?.error?.code;
+  if (code === 190 || /session has expired|error validating access token/i.test(message)) {
+    message =
+      'Token do Instagram/Meta expirado ou inválido. Gere um novo token da Página no Meta for Developers e atualize META_ACCESS_TOKEN no Render (e no .env local se publicar pelo localhost).';
+  }
+  const err = new Error(message);
   err.status = 400;
-  err.graphCode = payload?.error?.code;
+  err.graphCode = code;
   err.graphSubcode = payload?.error?.error_subcode;
   return err;
 }

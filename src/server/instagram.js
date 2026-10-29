@@ -27,6 +27,8 @@ import {
   insertCommentDm,
   insertInstagramPost,
   listInstagramPostsForProduct,
+  listRecentCommentDms,
+  listRecentInstagramPosts,
   updateCommentDm,
 } from '../lib/instagramStore.js';
 import { getProductForUser, updateProductForUser } from '../lib/products.js';
@@ -48,6 +50,7 @@ const state = {
   igUserId: '',
   lastError: '',
   checkedAt: null,
+  lastWebhook: null,
 };
 
 function syncConfigFlags() {
@@ -65,9 +68,43 @@ export function getInstagramPublicState() {
     permissionsOk: state.permissionsOk,
     missingPermissions: state.missingPermissions,
     publicAppUrlConfigured: isPublicAppUrlConfigured(),
+    facebookPageIdConfigured: Boolean(config.facebookPageId || state.pageId),
+    webhookCallbackUrls: [
+      '/webhook',
+      '/api/webhook',
+    ],
     username: state.username,
+    pageId: state.pageId || config.facebookPageId || null,
     lastError: state.lastError,
     checkedAt: state.checkedAt,
+    lastWebhook: state.lastWebhook,
+  };
+}
+
+export async function getInstagramWebhookDiagnostics() {
+  syncConfigFlags();
+  let recentPosts = [];
+  let recentCommentDms = [];
+  let tablesOk = true;
+  let tablesError = null;
+
+  try {
+    [recentPosts, recentCommentDms] = await Promise.all([
+      listRecentInstagramPosts(5),
+      listRecentCommentDms(10),
+    ]);
+  } catch (err) {
+    tablesOk = false;
+    tablesError = err.message || 'Falha ao consultar Supabase';
+  }
+
+  return {
+    ...getInstagramPublicState(),
+    tablesOk,
+    tablesError,
+    recentPosts,
+    recentCommentDms,
+    setupGuide: '/docs/instagram-webhook-setup.md',
   };
 }
 
@@ -222,29 +259,49 @@ export async function getProductInstagramPosts(idProduct) {
   return listInstagramPostsForProduct(idProduct);
 }
 
+const COMMENT_FIELDS = new Set(['comments', 'live_comments']);
+
+function parseCommentChangeValue(value) {
+  if (!value || typeof value !== 'object') return null;
+  const text = value.text ?? value.message ?? value.comment_text ?? '';
+  const commentId = value.id || value.comment_id;
+  const commenterId =
+    value.from?.id || value.from?.username || value.igsid || value.sender_id || '';
+  const mediaId = value.media?.id || value.media_id || value.post_id || value.media?.media_id;
+  if (!commentId) return null;
+  return {
+    commentId: String(commentId),
+    commenterId: String(commenterId || ''),
+    text: String(text || ''),
+    mediaId: mediaId ? String(mediaId) : '',
+  };
+}
+
 function extractCommentEvents(body) {
   const events = [];
   const entries = Array.isArray(body?.entry) ? body.entry : [];
   for (const entry of entries) {
     const changes = Array.isArray(entry?.changes) ? entry.changes : [];
     for (const change of changes) {
-      if (String(change?.field || '') !== 'comments') continue;
-      const value = change.value || {};
-      const text = value.text ?? value.message ?? '';
-      const commentId = value.id || value.comment_id;
-      const commenterId =
-        value.from?.id || value.from?.username || value.igsid || '';
-      const mediaId = value.media?.id || value.media_id || value.post_id;
-      if (!commentId) continue;
-      events.push({
-        commentId: String(commentId),
-        commenterId: String(commenterId || ''),
-        text: String(text || ''),
-        mediaId: mediaId ? String(mediaId) : '',
-      });
+      const field = String(change?.field || '').toLowerCase();
+      if (!COMMENT_FIELDS.has(field)) continue;
+      const parsed = parseCommentChangeValue(change.value);
+      if (parsed) events.push(parsed);
     }
   }
   return events;
+}
+
+function summarizeWebhookResults(results) {
+  const summary = { sent: 0, skipped: 0, failed: 0, reasons: {} };
+  for (const item of results) {
+    if (item?.sent) summary.sent += 1;
+    else if (item?.failed) summary.failed += 1;
+    else summary.skipped += 1;
+    const reason = item?.reason || (item?.failed ? 'failed' : item?.sent ? 'sent' : 'unknown');
+    summary.reasons[reason] = (summary.reasons[reason] || 0) + 1;
+  }
+  return summary;
 }
 
 export async function handleInstagramCommentEvent(event) {
@@ -300,15 +357,54 @@ export async function handleInstagramCommentEvent(event) {
 }
 
 export async function processInstagramWebhookBody(body) {
+  const objectType = String(body?.object || 'unknown');
   const events = extractCommentEvents(body);
+  const entryFields = [];
+  for (const entry of body?.entry ?? []) {
+    for (const change of entry?.changes ?? []) {
+      if (change?.field) entryFields.push(String(change.field));
+    }
+  }
+
+  console.log(
+    `[Instagram] webhook object=${objectType} commentEvents=${events.length} fields=${entryFields.join(',') || 'none'}`,
+  );
+
+  if (events.length === 0 && entryFields.length > 0) {
+    console.warn(
+      '[Instagram] webhook recebido mas nenhum evento comments parseado. Confirme assinatura do campo "comments" na Meta.',
+    );
+  }
+
   const results = [];
   for (const event of events) {
     try {
-      results.push(await handleInstagramCommentEvent(event));
+      const result = await handleInstagramCommentEvent(event);
+      results.push(result);
+      if (result?.sent) {
+        console.log(`[Instagram] DM enviada commentId=${event.commentId} mediaId=${event.mediaId}`);
+      } else if (result?.skipped) {
+        console.log(
+          `[Instagram] comentário ignorado reason=${result.reason} commentId=${event.commentId}`,
+        );
+      } else if (result?.failed) {
+        console.error(
+          `[Instagram] falha DM commentId=${event.commentId} error=${result.error}`,
+        );
+      }
     } catch (err) {
       console.error('[Instagram] webhook comment', err);
       results.push({ failed: true, error: err.message });
     }
   }
+
+  state.lastWebhook = {
+    at: new Date().toISOString(),
+    object: objectType,
+    fields: entryFields,
+    eventCount: events.length,
+    summary: summarizeWebhookResults(results),
+  };
+
   return results;
 }

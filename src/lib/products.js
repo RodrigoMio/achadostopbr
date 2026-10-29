@@ -3,7 +3,12 @@ import { generateProductFromUserPrompt } from './gemini.js';
 import { isGeminiConfigured } from './config.js';
 import { getUserPromptIa } from './users.js';
 import { getServiceClient } from './supabase.js';
-import { asPositiveInt, asTrimmedString, isHttpUrl } from './validation.js';
+import {
+  asPositiveInt,
+  asTrimmedString,
+  isHttpUrl,
+  normalizeProductImageLink,
+} from './validation.js';
 
 const PRODUCT_SELECT_RELATIONS = `
   category:id_category ( id_category, label ),
@@ -102,7 +107,7 @@ export function hasProductEditFields(body) {
 export function parseProductWritePayload(body) {
   const payload = body ?? {};
   const productLink = asTrimmedString(payload.product_link);
-  const imageLink = asTrimmedString(payload.image_link);
+  const imageLink = normalizeProductImageLink(payload.image_link);
   const affiliatedLink = asTrimmedString(payload.affiliated_link);
   const title = asTrimmedString(payload.title);
   const iaDescription = asTrimmedString(payload.ia_description);

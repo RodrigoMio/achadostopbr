@@ -1,7 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { config } from './config.js';
 import { missingPublicAppUrlMessage } from './publicOrigin.js';
-import { isHttpsUrl } from './validation.js';
+import { isHttpsUrl, normalizeProductImageLink } from './validation.js';
 
 const META_UA =
   'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
@@ -87,7 +87,7 @@ function normalizeContentType(headerValue, buffer) {
 }
 
 export async function downloadProductImage(imageUrl) {
-  const url = String(imageUrl || '').trim();
+  const url = normalizeProductImageLink(imageUrl);
   if (!isHttpsUrl(url)) {
     const err = new Error('URL da imagem do produto deve ser HTTPS.');
     err.status = 400;
