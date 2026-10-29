@@ -19,6 +19,7 @@ import {
   Sun,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { LegalLinks } from '@/components/LegalLinks';
 import { buildWhatsAppGroupInviteUrl } from '@/lib/whatsappInvite';
 
 const CATEGORY_STYLES = {
@@ -197,9 +198,6 @@ export function GroupsLanding({ profile, categories }) {
             </div>
           </main>
 
-          <footer className="py-8 text-center text-xs text-muted-foreground">
-            Buscador de Ofertas · Grupos AchadosTop
-          </footer>
         </>
       ) : (
         <main className="mx-auto max-w-6xl px-3 py-16 sm:px-6">
@@ -208,6 +206,11 @@ export function GroupsLanding({ profile, categories }) {
           </p>
         </main>
       )}
+
+      <footer className="space-y-3 px-4 py-8 text-center text-xs text-muted-foreground">
+        <p>Buscador de Ofertas · Grupos AchadosTop</p>
+        <LegalLinks />
+      </footer>
     </div>
   );
 }

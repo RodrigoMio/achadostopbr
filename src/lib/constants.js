@@ -16,6 +16,8 @@ export const RESERVED_SLUGS = new Set([
   'products',
   'api',
   'webhook',
+  'police',
+  'terms',
   'favicon.ico',
   'robots.txt',
   'sitemap.xml',

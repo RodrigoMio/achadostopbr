@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, MessageCircle, Moon, Search, Sun } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { LegalLinks } from '@/components/LegalLinks';
 import { WhatsAppBanner } from '@/components/showcase/WhatsAppBanner';
 import { WhatsAppCard } from '@/components/showcase/WhatsAppCard';
 import { getPlatformPresentation } from '@/lib/platforms';
@@ -398,6 +399,10 @@ export function ShowcaseGrid({ profile, products, categories, platforms }) {
           </ul>
         )}
       </main>
+
+      <footer className="px-4 pb-28 pt-8 text-center text-xs text-muted-foreground sm:pb-10">
+        <LegalLinks />
+      </footer>
 
       <div
         className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-surface/95 p-3 backdrop-blur-md sm:hidden"
