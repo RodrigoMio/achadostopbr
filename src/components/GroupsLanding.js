@@ -19,7 +19,7 @@ import {
   Sun,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { LegalLinks } from '@/components/LegalLinks';
+import { SiteFooter } from '@/components/SiteFooter';
 import { buildWhatsAppGroupInviteUrl } from '@/lib/whatsappInvite';
 
 const CATEGORY_STYLES = {
@@ -207,10 +207,10 @@ export function GroupsLanding({ profile, categories }) {
         </main>
       )}
 
-      <footer className="space-y-3 px-4 py-8 text-center text-xs text-muted-foreground">
-        <p>Buscador de Ofertas · Grupos AchadosTop</p>
-        <LegalLinks />
-      </footer>
+      <SiteFooter
+        className="space-y-3 px-4 py-8 text-xs text-muted-foreground"
+        tagline="Buscador de Ofertas · Grupos AchadosTop"
+      />
     </div>
   );
 }

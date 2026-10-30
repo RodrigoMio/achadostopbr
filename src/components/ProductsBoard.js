@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { LegalLinks } from '@/components/LegalLinks';
+import { SiteFooter } from '@/components/SiteFooter';
 import { STATUS } from '@/lib/constants';
 import { InstagramPublishModal } from './InstagramPublishModal';
 import { ProductModal } from './ProductModal';
@@ -480,9 +480,7 @@ export function ProductsBoard({
         onToast={setToast}
       />
 
-      <footer className="mt-10 border-t border-slate-200 pt-4 text-center text-xs text-slate-500">
-        <LegalLinks />
-      </footer>
+      <SiteFooter className="mt-10 border-t border-slate-200 px-2 pt-6 text-xs text-slate-500" />
     </section>
   );
 }

@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { LegalLinks } from '@/components/LegalLinks';
+import { SiteFooter } from '@/components/SiteFooter';
+import { CONTACT_EMAIL } from '@/lib/constants';
 
-export const LEGAL_CONTACT_EMAIL = 'achadostopbr.ofertas@gmail.com';
+export const LEGAL_CONTACT_EMAIL = CONTACT_EMAIL;
 export const LEGAL_UPDATED_AT = '29 de outubro de 2026';
 
 export function LegalDocument({ title, children }) {
@@ -20,6 +22,7 @@ export function LegalDocument({ title, children }) {
         <p className="mt-2 text-sm text-slate-500">Atualizado em {LEGAL_UPDATED_AT}</p>
         <div className="mt-8 space-y-8 text-sm leading-relaxed sm:text-base">{children}</div>
       </article>
+      <SiteFooter className="border-t border-slate-200 px-4 py-8 text-xs text-slate-500 sm:px-6" />
     </div>
   );
 }
